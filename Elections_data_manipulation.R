@@ -11,6 +11,7 @@ library(tidyr)
 library(here) 
 library(stringr) 
 library(purrr) 
+library("readxl")
 
 # Upload Brazilian elections 2008 data (source data: https://dadosabertos.tse.jus.br/dataset/resultados-2008)
 
@@ -124,7 +125,139 @@ location_sections<- location_sections %>% filter(!SG_UF %in% c("DF","ZZ")) # exc
 votes_per_candidate_name_per_section<- merge(votes_per_section, votes_per_candidate, by.x=c("ID_CANDIDATE", "NAME_MUNICIPALITY"), by.y=c("NUM_BALLOT_CANDIDATE", "NAME_MUNICIPALITY"), all.x=TRUE, all.y=FALSE)
 votes_per_candidate_name_per_section = subset(votes_per_candidate_name_per_section, select= -c(YEAR_ELECTION.y, NUM_ROUND.y,
                                                                                                ACRONYM_STATE.y,Total.y)) # dataset containing candidate ID, name, party, year of the election, election round, state, municipality and votes per section (voting precincts)
-e<-merge(votes_per_candidate_name_per_section,location_sections,  by.x=c("NAME_MUNICIPALITY", "NUM_ELECT_SECTION"), by.y=c("NM_MUNICIPIO", "NR_SECAO"), all.x=TRUE, all.y=FALSE)
+votes_per_candidate_name_per_section<-merge(votes_per_candidate_name_per_section,location_sections,  by.x=c("NAME_MUNICIPALITY", "NUM_ELECT_SECTION"), by.y=c("NM_MUNICIPIO", "NR_SECAO"), all.x=TRUE, all.y=FALSE)
 # problem with big cities where a section includes several neighbourhoods
 
+# filter data according to municipalities audited ####
+drawn_municipalities<-read_excel("Sorteios_UFs.xlsx") # upload dataset containning municipalities drawn in the lotteries 22-38
+drawn_municipalities<-as.data.frame(unique(drawn_municipalities$NAME_MUNICIPALITY)) # collect unque municipalities as some were audited more than once
+votes_per_candidate_name_per_section<- votes_per_candidate_name_per_section %>% 
+  filter(NAME_MUNICIPALITY %in% drawn_municipalities$`unique(drawn_municipalities$NAME_MUNICIPALITY)`) # excluding all municipalities which were not audited - verify if drawn municipalities = unique(votes_per_candidate_name_per_section$NAME_MUNICIPALITY) are equal
 
+# separate all sections that have no information about their lat and long
+missing_sections<-filter(votes_per_candidate_name_per_section, 
+                         NR_LATITUDE == -1 | NR_LATITUDE==-1.000000 
+                         | NR_LONGITUDE == -1 | NR_LONGITUDE ==-1.00000) %>% select(NAME_MUNICIPALITY,NUM_ELECT_SECTION, ACRONYM_STATE.x,
+                                                                                    NM_LOCAL_VOTACAO, DS_ENDERECO, NM_BAIRRO, NR_CEP,
+                                                                                    NR_LATITUDE, NR_LONGITUDE)
+missing_sections$address <- paste(missing_sections$DS_ENDERECO, ",", missing_sections$NAME_MUNICIPALITY)
+missing_sections<-missing_sections[!duplicated(missing_sections[,"address"]),]
+# export missing sections csv - several issues in the addresses to be corrected manually.
+
+missing_sections<-read_excel("missing_sections.xlsx")
+
+
+
+
+# map of municipalities BR - https://github.com/ipeaGIT/geobr
+# utils::remove.packages('geobr')
+devtools::install_github("ipeaGIT/geobr", subdir = "r-package")
+install.packages("ggspatial")
+library(geobr)
+library(sf)
+library(ggplot2)
+library(ggspatial)
+library(RColorBrewer)
+# Read all municipalities in the country at a given year
+mun <- read_municipality(code_muni="all", year=2018)
+
+tema_mapa <-
+  theme_bw() + # Escolhe o tema. Eu gosto do theme_bw() por ser bem simples/limpo
+  theme(
+    axis.text.y = element_text(
+      angle = 90,
+      hjust = 0.5,
+      size = 8
+    ),
+    axis.text.x = element_text(size = 8),
+    axis.title.y = element_text(size = rel(0.8)),
+    axis.title.x = element_text(size = rel(0.8)),
+    panel.grid.major = element_line(
+      color = gray(0.9),
+      linetype = "dashed",
+      size = 0.1
+    ),
+    panel.background = element_rect(fill = "white") +
+      annotation_scale(location = "br", width_hint = 0.30)
+  ) # reference https://beatrizmilz.com/blog/2020-07-27-criando-mapas-com-os-pacotes-tidyverse-e-geobr/
+
+
+
+ggplot() + geom_sf(data=mun, fill = NA) + scale_fill_gradientn(colours= brewer.pal(9, "RdYlGn"))+
+  theme_void()
+
+ggplot() + geom_sf(data=mun, fill = NA) + ggspatial::annotation_scale() +
+  tema_mapa + geom_sf(size = 0.01)
+
+# ggsave('mapa.pdf', width = 15, height = 15, dpi = 100)
+
+
+
+
+
+
+
+########################################################################################################
+#######################################################################################################
+###########################################################################################ignore below:
+
+# create list of addresses
+library(tidygeocoder)
+# options(tidygeocoder.progress_bar = FALSE)
+
+# missing_sections %>%  geocode(street = street, city = NAME_MUNICIPALITY, state = ACRONYM_STATE.x, postalcode = NR_CEP, method = 'census', full_results = TRUE)
+missing_sections %>% geocode(street, method = 'osm', limit = 2,
+                             return_input = FALSE, full_results = F)
+
+# install packages
+install.packages("ggmap")
+install.packages("tmaptools")
+install.packages("RCurl")
+install.packages("jsonlite")
+install.packages("leaflet")
+# load packages
+library(ggmap)
+library(tmaptools)
+library(RCurl)
+library(jsonlite)
+library(leaflet)
+pubs <- c("AVENIDA JOAQUIM CAETANO DA SILVA")
+pubs_m <- pubs
+pubs_m[pubs_m=="AVENIDA JOAQUIM CAETANO DA SILVA"] <- "AVENIDA JOAQUIM CAETANO DA SILVA"
+pubs_m_df <- data.frame(Pubs = pubs_m, stringsAsFactors = FALSE)
+
+# geocoding the London pubs
+# "bar" is special phrase added to limit the search
+pubs_tmaptools <- geocode_OSM(paste(pubs_m, "bar", sep = " "),
+                              details = TRUE, as.data.frame = TRUE)
+
+# extracting from the result only coordinates and address
+pubs_tmaptools <- pubs_tmaptools[, c("lat", "lon", "display_name")]
+pubs_tmaptools <- cbind(Pubs = pubs_m_df[-10, ], pubs_tmaptools)
+
+# print the results
+PUBS_LIST<-pubs_tmaptools
+
+
+install.packages('tidygeocoder')
+devtools::install_github("jessecambon/tidygeocoder")
+library(dplyr, warn.conflicts = FALSE)
+library(tidygeocoder)
+some_addresses <- tibble::tribble(
+  ~name,                  ~addr,
+  "OIAPOQUE",          "AVENIDA JOAQUIM CAETANO DA SILVA, OIAPOQUE, AP",
+  "ABADIA DOS DOURADOS", "AV. SANTOS  , 281, ABADIA DOS DOURADOS, MG "
+)
+lat_longs <- some_addresses %>%
+  geocode(addr, method = 'osm', lat = latitude , long = longitude)
+
+# options(tidygeocoder.progress_bar = FALSE)
+library(dplyr, warn.conflicts = FALSE)
+geo(street = "AV. SANTOS  , 281", city = "ABADIA DOS DOURADOS",
+    state = "MG", country= "Brazil", method = "osm")
+
+sample_addresses %>% slice(1:2) %>%
+  geocode(addr, method = 'arcgis')
+sample_addresses %>% slice(8:9) %>%
+  geocode(addr, method = 'osm', limit = 2,
+          return_input = FALSE, full_results = F)
