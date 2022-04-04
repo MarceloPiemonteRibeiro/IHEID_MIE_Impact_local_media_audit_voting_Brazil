@@ -1,6 +1,13 @@
 # Precinct votes data
 
 rm(list = ls()) # clear environment
+# devtools::install_github("ipeaGIT/geobr", subdir = "r-package")
+# install.packages("ggspatial")
+library(geobr)
+library(sf)
+library(ggplot2)
+library(ggspatial)
+library(RColorBrewer)
 library(tidyverse)
 library(Hmisc)
 # install.packages("lessR")
@@ -12,10 +19,11 @@ library(here)
 library(stringr) 
 library(purrr) 
 library("readxl")
+library("writexl")
 
 # Upload Brazilian elections 2008 data (source data: https://dadosabertos.tse.jus.br/dataset/resultados-2008)
 
-# Votes per section: ####
+# Votes per section (electoral precinct): ####
 setwd("C:/Users/Ribeiro/OneDrive/Documents/OneDrive/IHEID/Dissertation/Data Sources/Voting data/votes_section_year_state")
 votes_sections_files = list.files(here("./votes_section_year_state"),
                       all.files = T,  
@@ -30,7 +38,7 @@ read_votes_section = function(path) {
                                      "NAME_MUNICIPALITY", "NUM_ELECT_ZONE", "NUM_ELECT_SECTION",
                                      "CODE_POST", "DESCRIPT_POST", "ID_CANDIDATE",
                                      "NUM_VOTES_RECEIVED") ) ) # rename columns variables - refer to "LEIAME" pdf file
-  votes_per_section<-filter(votes_per_section, DESCRIPT_POST == "PREFEITO")
+  votes_per_section<-filter(votes_per_section, DESCRIPT_POST == "PREFEITO") # keep data related only to mayors elections
   votes_per_section <-votes_per_section %>% 
     select(ID_CANDIDATE, YEAR_ELECTION, NUM_ROUND, ACRONYM_STATE, NAME_MUNICIPALITY, NUM_ELECT_SECTION, NUM_VOTES_RECEIVED) %>%
     group_by(ID_CANDIDATE, YEAR_ELECTION, NUM_ROUND, ACRONYM_STATE, NAME_MUNICIPALITY,NUM_ELECT_SECTION) %>%
@@ -109,10 +117,10 @@ read_voters_profiles_sections = function(path) {
                                                                            NR_ZONA,QT_ELEITORES_BIOMETRIA, QT_ELEITORES_DEFICIENCIA,
                                                                            QT_ELEITORES_INC_NM_SOCIAL)) # subset dataset
 }
-d<- read_voters_profiles_sections(voters_profiles_sections[1])
+d<- read_voters_profiles_sections(voters_profiles_sections[1]) # example: sections characteristics of a given state, the state "[1]" of AC
 
 # Sections locations dataset ####
-# 2008 data is not available, the closest is from 2010 - need to check whether the sections changed from 2008 to 2010
+# 2008 data is not available, the closest is from 2010 
 setwd("../voters_location_voting_year")
 location_sections <-read.csv("eleitorado_local_votacao_2010.csv",header=T, sep=";")
 location_sections<-subset(location_sections, select = -c(DT_GERACAO,HH_GERACAO,CD_MUNICIPIO,NR_ZONA,
@@ -129,70 +137,83 @@ votes_per_candidate_name_per_section<-merge(votes_per_candidate_name_per_section
 # problem with big cities where a section includes several neighbourhoods
 
 # filter data according to municipalities audited ####
-drawn_municipalities<-read_excel("Sorteios_UFs.xlsx") # upload dataset containning municipalities drawn in the lotteries 22-38
-drawn_municipalities<-as.data.frame(unique(drawn_municipalities$NAME_MUNICIPALITY)) # collect unque municipalities as some were audited more than once
+drawn_municipalities<-read_excel("Sorteios_UFs.xlsx") # upload dataset containning municipalities drawn in the lotteries 22-38 (2007-2014)
+drawn_municipalities<-as.data.frame(unique(drawn_municipalities$NAME_MUNICIPALITY)) # collect unique municipalities as some were audited more than once
 votes_per_candidate_name_per_section<- votes_per_candidate_name_per_section %>% 
   filter(NAME_MUNICIPALITY %in% drawn_municipalities$`unique(drawn_municipalities$NAME_MUNICIPALITY)`) # excluding all municipalities which were not audited - verify if drawn municipalities = unique(votes_per_candidate_name_per_section$NAME_MUNICIPALITY) are equal
 
-# separate all sections that have no information about their lat and long
-missing_sections<-filter(votes_per_candidate_name_per_section, 
-                         NR_LATITUDE == -1 | NR_LATITUDE==-1.000000 
-                         | NR_LONGITUDE == -1 | NR_LONGITUDE ==-1.00000) %>% select(NAME_MUNICIPALITY,NUM_ELECT_SECTION, ACRONYM_STATE.x,
-                                                                                    NM_LOCAL_VOTACAO, DS_ENDERECO, NM_BAIRRO, NR_CEP,
-                                                                                    NR_LATITUDE, NR_LONGITUDE)
-missing_sections$address <- paste(missing_sections$DS_ENDERECO, ",", missing_sections$NAME_MUNICIPALITY)
-missing_sections<-missing_sections[!duplicated(missing_sections[,"address"]),]
-# export missing sections csv - several issues in the addresses to be corrected manually.
+# several sections has no lat and long information available (eg., -1,-1 lat and lon) or no information about the voting section is available
+votes_per_candidate_name_per_section$info_available = ifelse(is.na(votes_per_candidate_name_per_section$NR_LATITUDE),"No","Yes") 
 
-missing_sections<-read_excel("missing_sections.xlsx")
+# poor result using tidygeocoder, all the coordinates of missing voting sections (without coordinates) were retrieved using "Geocode by Awesome Table" 
+# extracted the below dataset
+# write_xlsx(votes_per_candidate_name_per_section,"C:/Users/Ribeiro/OneDrive/Documents/OneDrive/IHEID/Dissertation/Data Sources/Voting data/voters_location_voting_year/votes_per_candidate_name_per_section.xlsx")
+# completed the geo coordinates : 
+votes_per_candidate_name_per_section<-read_excel("votes_per_candidate_name_per_section_geo_located.xlsx") 
+# some sections contain more than one address, this is why the same candidate is displayed twice or more in the same section,
+# remain only unique candidates per unique sections:
+votes_per_candidate_name_per_section$duplicate_id<-paste(votes_per_candidate_name_per_section$NAME_MUNICIPALITY,
+                                                            votes_per_candidate_name_per_section$NUM_ELECT_SECTION,
+                                                            votes_per_candidate_name_per_section$ACRONYM_STATE.x,
+                                                            votes_per_candidate_name_per_section$Total.x,
+                                                            votes_per_candidate_name_per_section$NAME_CANDIDATE) # create an unique id to remove duplicates
+votes_per_candidate_name_per_section<-votes_per_candidate_name_per_section %>% distinct(duplicate_id,.keep_all = T) # remove duplicates
+votes_per_candidate_name_per_section = subset(votes_per_candidate_name_per_section, select= -c(NR_LATITUDE, NR_LONGITUDE, latitude, longitude, duplicate_id)) # remove unused columns
 
-
-
-
-# map of municipalities BR - https://github.com/ipeaGIT/geobr
+# map of municipalities BR - https://github.com/ipeaGIT/geobr ####
 # utils::remove.packages('geobr')
-devtools::install_github("ipeaGIT/geobr", subdir = "r-package")
-install.packages("ggspatial")
-library(geobr)
-library(sf)
-library(ggplot2)
-library(ggspatial)
-library(RColorBrewer)
 # Read all municipalities in the country at a given year
-mun <- read_municipality(code_muni="all", year=2018)
+mun <- read_municipality(code_muni="all", year=2010)
+# plot municipalities together with voting sections
+ggplot() + 
+  geom_sf(data=mun, fill = NA) + scale_fill_gradientn(colours= brewer.pal(9, "RdYlGn"))+
+  geom_point(data = votes_per_candidate_name_per_section, mapping = aes(x = lon, y = lat, colour = factor(ACRONYM_STATE.x)), size = 1) + 
+  coord_sf()+
+  theme(panel.grid.major = element_blank(), panel.background = element_blank(), panel.grid.minor = element_blank())+
+  labs(col="States")+
+  ggtitle("Brazil's voting precincts locations in 2010")
 
-tema_mapa <-
-  theme_bw() + # Escolhe o tema. Eu gosto do theme_bw() por ser bem simples/limpo
-  theme(
-    axis.text.y = element_text(
-      angle = 90,
-      hjust = 0.5,
-      size = 8
-    ),
-    axis.text.x = element_text(size = 8),
-    axis.title.y = element_text(size = rel(0.8)),
-    axis.title.x = element_text(size = rel(0.8)),
-    panel.grid.major = element_line(
-      color = gray(0.9),
-      linetype = "dashed",
-      size = 0.1
-    ),
-    panel.background = element_rect(fill = "white") +
-      annotation_scale(location = "br", width_hint = 0.30)
-  ) # reference https://beatrizmilz.com/blog/2020-07-27-criando-mapas-com-os-pacotes-tidyverse-e-geobr/
-
-
-
-ggplot() + geom_sf(data=mun, fill = NA) + scale_fill_gradientn(colours= brewer.pal(9, "RdYlGn"))+
-  theme_void()
-
-ggplot() + geom_sf(data=mun, fill = NA) + ggspatial::annotation_scale() +
-  tema_mapa + geom_sf(size = 0.01)
-
+#ggplot() + geom_sf(data=mun, fill = NA) + ggspatial::annotation_scale() +
+#  tema_mapa + geom_sf(size = 0.01)
 # ggsave('mapa.pdf', width = 15, height = 15, dpi = 100)
 
 
+# Elected candidates in 2004 who could participate in the subsequent election ####
+setwd("../votes_candidates_munzona_year_state_2004")
+votes_municipalities_sections_2004 = list.files(here("./votes_candidates_munzona_year_state_2004"),
+                                        all.files = T,  
+                                        pattern = ".txt",
+                                        full.names = F,
+                                        recursive = TRUE) 
+read_votes_municipalities_sections_2004 = function(path) {
+  ( votes_municipalities_sections_2004 = read.delim (path, header = FALSE, sep = ";",
+                                                  col.names = c("DATA_GERACAO", "HORA_GERACAO" ,
+                                                                "YEAR_ELECTION", "NUM_ROUND", "DESCRIPT_ELECTION",
+                                                                "ACRONYM_STATE", "CODE_ELECT_UNIT1", "CODE_ELECT_UNIT2",
+                                                                "NAME_MUNICIPALITY", "NUM_ELECT_ZONE",
+                                                                "CODE_POST", "NUM_BALLOT_CANDIDATE", "TSE_INTERNAL_CANDIDATE_CODE",
+                                                                "NAME_CANDIDATE", "NAME_BALLOT_CANDIDATE",
+                                                                "DESCRIPT_POST", "COD_SIT_CAND_SUPERIOR", "DESC_SIT_CAND_SUPERIOR",
+                                                                "STATUS_ELECT_CANDIDATE_CODE", "STATUS_ELECT_CANDIDATE",
+                                                                "CODE_SIT_CAND_TOT", "RESULT", "PARTY_NUMBER", "PARTY_ACRONYM",
+                                                                "PARTY_NAME", "SEQUENCIAL_LEGENDA", "NAME_COALITION", 
+                                                                "COMPOSITION_COALITION", "NUM_VOTES_RECEIVED"))) # rename columns variables - refer to "LEIAME" pdf file
+  votes_municipalities_sections_2004 <- filter(votes_municipalities_sections_2004, DESCRIPT_POST == "PREFEITO") #filter only mayors, who can be affected by Federal audit's results
+  votes_municipalities_sections_2004 <-votes_municipalities_sections_2004 %>% 
+    select(NUM_BALLOT_CANDIDATE,YEAR_ELECTION, NUM_ROUND, ACRONYM_STATE, NAME_CANDIDATE, CODE_SIT_CAND_TOT, RESULT, PARTY_NUMBER, PARTY_ACRONYM, NAME_MUNICIPALITY, NUM_VOTES_RECEIVED) %>%
+    group_by(NUM_BALLOT_CANDIDATE, YEAR_ELECTION, NUM_ROUND, ACRONYM_STATE, NAME_CANDIDATE, CODE_SIT_CAND_TOT, RESULT, PARTY_NUMBER, PARTY_ACRONYM, NAME_MUNICIPALITY) %>%
+    summarise(Total = sum(NUM_VOTES_RECEIVED))
+} 
+f<- read_votes_municipalities_sections_2004(votes_municipalities_sections_2004[1])  # choose a specific state dataset - [] ranges from 1 to 26
+( elected_mayors_2004 = map_dfr(votes_municipalities_sections_2004, read_votes_municipalities_sections_2004) ) # combine all datasets
+# keep only the elected mayors
+elected_mayors_2004<-elected_mayors_2004[elected_mayors_2004$RESULT == "ELEITO",] 
+# In case these elected mayors are candidates in the 2008 elections, they are running for their 2nd turn and will be the only mayors of interest
 
+# merge the elected mayors in 2004 and the 2008 candidates
+candidates_2008<-left_join(votes_per_candidate_name_per_section, elected_mayors_2004, by=c("NAME_CANDIDATE","NAME_MUNICIPALITY"))
+candidates_2008<- merge(votes_per_candidate_name_per_section, elected_mayors_2004, by.x=c("NAME_CANDIDATE"), 
+                        by.y=c("NAME_CANDIDATE"), all.x=TRUE, all.y=FALSE)
 
 
 
@@ -200,6 +221,31 @@ ggplot() + geom_sf(data=mun, fill = NA) + ggspatial::annotation_scale() +
 ########################################################################################################
 #######################################################################################################
 ###########################################################################################ignore below:
+library(electionsBR)
+citation('electionsBR')
+df <- vote_mun_zone_local(2016)
+
+  tema_mapa <-
+    theme_bw() + # Escolhe o tema. Eu gosto do theme_bw() por ser bem simples/limpo
+    theme(
+      axis.text.y = element_text(
+        angle = 90,
+        hjust = 0.5,
+        size = 8
+      ),
+      axis.text.x = element_text(size = 8),
+      axis.title.y = element_text(size = rel(0.8)),
+      axis.title.x = element_text(size = rel(0.8)),
+      panel.grid.major = element_line(
+        color = gray(0.9),
+        linetype = "dashed",
+        size = 0.1
+      ),
+      panel.background = element_rect(fill = "white") +
+        annotation_scale(location = "br", width_hint = 0.30)
+    ) # reference https://beatrizmilz.com/blog/2020-07-27-criando-mapas-com-os-pacotes-tidyverse-e-geobr/
+  
+  
 
 # create list of addresses
 library(tidygeocoder)
@@ -209,12 +255,12 @@ library(tidygeocoder)
 missing_sections %>% geocode(street, method = 'osm', limit = 2,
                              return_input = FALSE, full_results = F)
 
-# install packages
-install.packages("ggmap")
-install.packages("tmaptools")
-install.packages("RCurl")
-install.packages("jsonlite")
-install.packages("leaflet")
+# # install packages
+# install.packages("ggmap")
+# install.packages("tmaptools")
+# install.packages("RCurl")
+# install.packages("jsonlite")
+# install.packages("leaflet")
 # load packages
 library(ggmap)
 library(tmaptools)
