@@ -20,6 +20,7 @@ library(stringr)
 library(purrr) 
 library("readxl")
 library("writexl")
+library(electionsBR)
 
 # Upload Brazilian elections 2008 data (source data: https://dadosabertos.tse.jus.br/dataset/resultados-2008)
 
@@ -44,7 +45,7 @@ read_votes_section = function(path) {
     group_by(ID_CANDIDATE, YEAR_ELECTION, NUM_ROUND, ACRONYM_STATE, NAME_MUNICIPALITY,NUM_ELECT_SECTION) %>%
     summarise(Total = sum(NUM_VOTES_RECEIVED))
 } 
-a<- read_votes_section(votes_sections_files[1]) # choose a specific n° to check state datasets - [] ranges from 1 to 26
+# a<- read_votes_section(votes_sections_files[1]) # choose a specific n° to check state datasets - [] ranges from 1 to 26
 ( votes_per_section = map_dfr(votes_sections_files, read_votes_section) ) # combine all datasets
 # Notes:
 # Summary information is correct and reflected on the 2008 Electoral Superior Tribunal statistics portal : https://sig.tse.jus.br/ords/dwtse/f?p=150:3:::NO:RP:: and https://www.tse.jus.br/hotsites/estatistica2008/indexResult.htm 
@@ -76,7 +77,7 @@ read_votes_municip_candidat_names = function(path) {
     group_by(NUM_BALLOT_CANDIDATE, YEAR_ELECTION, NUM_ROUND, ACRONYM_STATE, NAME_CANDIDATE, CODE_SIT_CAND_TOT, RESULT, PARTY_NUMBER, PARTY_ACRONYM, NAME_MUNICIPALITY) %>%
     summarise(Total = sum(NUM_VOTES_RECEIVED))
 } 
-b<- read_votes_municip_candidat_names(votes_municipalities_names[1])  # choose a specific state dataset - [] ranges from 1 to 26
+# b<- read_votes_municip_candidat_names(votes_municipalities_names[1])  # choose a specific state dataset - [] ranges from 1 to 26
 ( votes_per_candidate = map_dfr(votes_municipalities_names, read_votes_municip_candidat_names) ) # combine all datasets
 
 # Electors characteristics per section: ####
@@ -97,28 +98,12 @@ read_details_votes_sections = function(path) {
                                         "VOIDS_VOTES", "VOTES_COALITION", "CANCELLED_VOTES"))) # rename columns variables - refer to "LEIAME" pdf file
   detailed_votes <- filter(detailed_votes, DESCRIPT_POST == "PREFEITO")
 }
-c<- read_details_votes_sections(details_votes_sections[1])  # choose a specific state dataset - [] ranges from 1 to 26
+# c<- read_details_votes_sections(details_votes_sections[1])  # choose a specific state dataset - [] ranges from 1 to 26
 ( detailed_votes_per_section = map_dfr(details_votes_sections, read_details_votes_sections) ) # combine all datasets
 detailed_votes_per_section$ATTENDANCE_PERCENTAGE <- detailed_votes_per_section[,15]/detailed_votes_per_section[,14] # calculate voting turnout - the % of people voting in the section
 detailed_votes_per_section = subset(detailed_votes_per_section, select = -c(DATA_GERACAO,HORA_GERACAO,DESCRIPT_ELECTION,
                                                                             CODE_ELECT_UNIT1, CODE_ELECT_UNIT2,NUM_ELECT_ZONE,
                                                                             CODE_POST)) # Subset dataset
-# Profile voters characteristics by sections: ####
-setwd("../profile_voters_section_year_state")
-voters_profiles_sections = list.files(here("./profile_voters_section_year_state"),
-                                    all.files = T,  
-                                    pattern = ".csv",
-                                    full.names = F,
-                                    recursive = TRUE) 
-read_voters_profiles_sections = function(path) {
-  ( profile_voters_sections = read.csv (path, header = T, sep = ";")) # rename columns variables - refer to "LEIAME" pdf file
-    profile_voters_sections <-subset(profile_voters_sections, select = -c(DT_GERACAO,HH_GERACAO,CD_MUNICIPIO,
-                                                                           CD_MUN_SIT_BIOMETRICA, DS_MUN_SIT_BIOMETRICA,
-                                                                           NR_ZONA,QT_ELEITORES_BIOMETRIA, QT_ELEITORES_DEFICIENCIA,
-                                                                           QT_ELEITORES_INC_NM_SOCIAL)) # subset dataset
-}
-d<- read_voters_profiles_sections(voters_profiles_sections[1]) # example: sections characteristics of a given state, the state "[1]" of AC
-
 # Sections locations dataset ####
 # 2008 data is not available, the closest is from 2010 
 setwd("../voters_location_voting_year")
@@ -130,10 +115,9 @@ location_sections<- location_sections %>% filter(!SG_UF %in% c("DF","ZZ")) # exc
 
 
 # combine datasets ####
-votes_per_candidate_name_per_section<- merge(votes_per_section, votes_per_candidate, by.x=c("ID_CANDIDATE", "NAME_MUNICIPALITY"), by.y=c("NUM_BALLOT_CANDIDATE", "NAME_MUNICIPALITY"), all.x=TRUE, all.y=FALSE)
-votes_per_candidate_name_per_section = subset(votes_per_candidate_name_per_section, select= -c(YEAR_ELECTION.y, NUM_ROUND.y,
-                                                                                               ACRONYM_STATE.y,Total.y)) # dataset containing candidate ID, name, party, year of the election, election round, state, municipality and votes per section (voting precincts)
-votes_per_candidate_name_per_section<-merge(votes_per_candidate_name_per_section,location_sections,  by.x=c("NAME_MUNICIPALITY", "NUM_ELECT_SECTION"), by.y=c("NM_MUNICIPIO", "NR_SECAO"), all.x=TRUE, all.y=FALSE)
+votes_per_candidate_name_per_section<- merge(votes_per_section, votes_per_candidate, by.x=c("ID_CANDIDATE", "NAME_MUNICIPALITY", "ACRONYM_STATE"), by.y=c("NUM_BALLOT_CANDIDATE", "NAME_MUNICIPALITY", "ACRONYM_STATE"), all.x=TRUE, all.y=FALSE)
+votes_per_candidate_name_per_section = subset(votes_per_candidate_name_per_section, select= -c(YEAR_ELECTION.y, NUM_ROUND.y,Total.y)) # dataset containing candidate ID, name, party, year of the election, election round, state, municipality and votes per section (voting precincts)
+votes_per_candidate_name_per_section<-merge(votes_per_candidate_name_per_section,location_sections,  by.x=c("NAME_MUNICIPALITY", "NUM_ELECT_SECTION", "ACRONYM_STATE"), by.y=c("NM_MUNICIPIO", "NR_SECAO","SG_UF"), all.x=TRUE, all.y=FALSE)
 # problem with big cities where a section includes several neighbourhoods
 
 # filter data according to municipalities audited ####
@@ -149,34 +133,22 @@ votes_per_candidate_name_per_section$info_available = ifelse(is.na(votes_per_can
 # extracted the below dataset
 # write_xlsx(votes_per_candidate_name_per_section,"C:/Users/Ribeiro/OneDrive/Documents/OneDrive/IHEID/Dissertation/Data Sources/Voting data/voters_location_voting_year/votes_per_candidate_name_per_section.xlsx")
 # completed the geo coordinates : 
-votes_per_candidate_name_per_section<-read_excel("votes_per_candidate_name_per_section_geo_located.xlsx") 
-# some sections contain more than one address, this is why the same candidate is displayed twice or more in the same section,
+votes_per_candidate_name_per_section_geo<-read_excel("votes_per_candidate_name_per_section_geo_reduced.xlsx") 
+
+# remove data regarding the elections 2nd turn as "NUM_ROUND.x"=1 indicates already if the candidate was or not elected
+votes_per_candidate_name_per_section_geo <- filter(votes_per_candidate_name_per_section_geo, NUM_ROUND.x != 2)
+votes_per_candidate_name_per_section_geo <- filter(votes_per_candidate_name_per_section_geo, RESULT != "2º TURNO")
+
 # remain only unique candidates per unique sections:
-votes_per_candidate_name_per_section$duplicate_id<-paste(votes_per_candidate_name_per_section$NAME_MUNICIPALITY,
-                                                            votes_per_candidate_name_per_section$NUM_ELECT_SECTION,
-                                                            votes_per_candidate_name_per_section$ACRONYM_STATE.x,
-                                                            votes_per_candidate_name_per_section$Total.x,
-                                                            votes_per_candidate_name_per_section$NAME_CANDIDATE) # create an unique id to remove duplicates
-votes_per_candidate_name_per_section<-votes_per_candidate_name_per_section %>% distinct(duplicate_id,.keep_all = T) # remove duplicates
-votes_per_candidate_name_per_section = subset(votes_per_candidate_name_per_section, select= -c(NR_LATITUDE, NR_LONGITUDE, latitude, longitude, duplicate_id)) # remove unused columns
-
-# map of municipalities BR - https://github.com/ipeaGIT/geobr ####
-# utils::remove.packages('geobr')
-# Read all municipalities in the country at a given year
-mun <- read_municipality(code_muni="all", year=2010)
-# plot municipalities together with voting sections
-ggplot() + 
-  geom_sf(data=mun, fill = NA) + scale_fill_gradientn(colours= brewer.pal(9, "RdYlGn"))+
-  geom_point(data = votes_per_candidate_name_per_section, mapping = aes(x = lon, y = lat, colour = factor(ACRONYM_STATE.x)), size = 1) + 
-  coord_sf()+
-  theme(panel.grid.major = element_blank(), panel.background = element_blank(), panel.grid.minor = element_blank())+
-  labs(col="States")+
-  ggtitle("Brazil's voting precincts locations in 2010")
-
-#ggplot() + geom_sf(data=mun, fill = NA) + ggspatial::annotation_scale() +
-#  tema_mapa + geom_sf(size = 0.01)
-# ggsave('mapa.pdf', width = 15, height = 15, dpi = 100)
-
+votes_per_candidate_name_per_section_geo$duplicate_id<-paste(votes_per_candidate_name_per_section_geo$NAME_MUNICIPALITY,
+                                                            votes_per_candidate_name_per_section_geo$NUM_ELECT_SECTION,
+                                                            votes_per_candidate_name_per_section_geo$ACRONYM_STATE,
+                                                            votes_per_candidate_name_per_section_geo$Total.x,
+                                                            votes_per_candidate_name_per_section_geo$NAME_CANDIDATE,
+                                                            votes_per_candidate_name_per_section_geo$RESULT) # create an unique id to remove duplicates
+votes_per_candidate_name_per_section_geo<-votes_per_candidate_name_per_section_geo %>% distinct(duplicate_id,.keep_all = T) # remove duplicates
+votes_per_candidate_name_per_section_geo = subset(votes_per_candidate_name_per_section_geo, select= -c(AA_ELEICAO, DT_ELEICAO, DS_ELEICAO, DS_TIPO_SECAO_AGREGADA,
+                                                                                                       NR_LATITUDE, NR_LONGITUDE, id, duplicate_id)) # remove unused columns
 
 # Elected candidates in 2004 who could participate in the subsequent election ####
 setwd("../votes_candidates_munzona_year_state_2004")
@@ -204,19 +176,82 @@ read_votes_municipalities_sections_2004 = function(path) {
     group_by(NUM_BALLOT_CANDIDATE, YEAR_ELECTION, NUM_ROUND, ACRONYM_STATE, NAME_CANDIDATE, CODE_SIT_CAND_TOT, RESULT, PARTY_NUMBER, PARTY_ACRONYM, NAME_MUNICIPALITY) %>%
     summarise(Total = sum(NUM_VOTES_RECEIVED))
 } 
-f<- read_votes_municipalities_sections_2004(votes_municipalities_sections_2004[1])  # choose a specific state dataset - [] ranges from 1 to 26
+# f<- read_votes_municipalities_sections_2004(votes_municipalities_sections_2004[1])  # choose a specific state dataset - [] ranges from 1 to 26
 ( elected_mayors_2004 = map_dfr(votes_municipalities_sections_2004, read_votes_municipalities_sections_2004) ) # combine all datasets
-# keep only the elected mayors
-elected_mayors_2004<-elected_mayors_2004[elected_mayors_2004$RESULT == "ELEITO",] 
+elected_mayors_2004<-elected_mayors_2004[elected_mayors_2004$RESULT == "ELEITO",] # 5559 rows - in 2004, 5560 municipalities including the capital state DF ()
 # In case these elected mayors are candidates in the 2008 elections, they are running for their 2nd turn and will be the only mayors of interest
 
+# some mayors have the same name, create variable with their name and municipality name
+elected_mayors_2004$unique_name_candidate<-paste(elected_mayors_2004$NAME_MUNICIPALITY,elected_mayors_2004$NAME_CANDIDATE)
+votes_per_candidate_name_per_section_geo$unique_name_candidate<-paste(votes_per_candidate_name_per_section_geo$NAME_MUNICIPALITY,votes_per_candidate_name_per_section_geo$NAME_CANDIDATE)
+
 # merge the elected mayors in 2004 and the 2008 candidates
-candidates_2008<-left_join(votes_per_candidate_name_per_section, elected_mayors_2004, by=c("NAME_CANDIDATE","NAME_MUNICIPALITY"))
-candidates_2008<- merge(votes_per_candidate_name_per_section, elected_mayors_2004, by.x=c("NAME_CANDIDATE"), 
-                        by.y=c("NAME_CANDIDATE"), all.x=TRUE, all.y=FALSE)
+candidates_2008<-merge(x=votes_per_candidate_name_per_section_geo,y=elected_mayors_2004,by="unique_name_candidate", all.x = TRUE)
+# identify candidates that were running for re-elections
+candidates_2008$reelection_candidature = ifelse(is.na(candidates_2008$NUM_BALLOT_CANDIDATE),"No","Yes") 
+# limitation: no available data in 2004 at section disaggregation level.
+
+# create candidate's voting shares and dummy indicating victory or not by voting section
+candidates_2008<-candidates_2008 %>% 
+  group_by(ACRONYM_STATE.x, NAME_MUNICIPALITY.x, NUM_ELECT_SECTION) %>% 
+  mutate(
+    Share = Total.x / sum(Total.x),
+    Elect_2008 = +(Total.x == max(Total.x))
+  ) %>% 
+  ungroup()
+
+# filter out the non used columns
+candidates_2008 = subset(candidates_2008, select= -c(NUM_BALLOT_CANDIDATE, Total,YEAR_ELECTION, NUM_ROUND,
+                                                     ACRONYM_STATE.y, NAME_CANDIDATE.y, CODE_SIT_CAND_TOT.y,
+                                                     RESULT.y, PARTY_NUMBER.y,PARTY_ACRONYM.y,NAME_MUNICIPALITY.y)) # remove unused columns
+# keep only mayors that were trying to be re-elected as they were the only ones that could be audited, so punished by electors covered (treated) or not (control) by radio coverage
+candidates_2008<-candidates_2008[candidates_2008$reelection_candidature == "Yes",] 
+
+# Profile voters characteristics by sections: to be used as covariates ####
+# voters_profile_by_municipality <-voter_profile(2008) - voter's profiles by municipality
+
+# Profile voters characteristics by sections: to be used as covariates ####
+setwd("../profile_voters_section_year_state")
+voters_profiles_sections = list.files(here("./profile_voters_section_year_state"),
+                                      all.files = T,  
+                                      pattern = ".csv",
+                                      full.names = F,
+                                      recursive = TRUE) 
+read_voters_profiles_sections = function(path) {
+  ( profile_voters_sections = read.csv (path, header = T, sep = ";")) # rename columns variables - refer to "LEIAME" pdf file
+  profile_voters_sections <-subset(profile_voters_sections, select = -c(DT_GERACAO,HH_GERACAO,CD_MUNICIPIO,
+                                                                        CD_MUN_SIT_BIOMETRICA, DS_MUN_SIT_BIOMETRICA,
+                                                                        NR_ZONA,QT_ELEITORES_BIOMETRIA, QT_ELEITORES_DEFICIENCIA,
+                                                                        QT_ELEITORES_INC_NM_SOCIAL)) # subset dataset
+}
+# d<- read_voters_profiles_sections(voters_profiles_sections[1]) # example: sections characteristics of a given state, the state "[1]" of AC
+( profile_voters_sections = map_dfr(voters_profiles_sections, read_voters_profiles_sections) )
+# exclude the non related municipalities:
+profile_voters_sections$unique_name_municipality<-paste(profile_voters_sections$SG_UF,profile_voters_sections$NM_MUNICIPIO) # create unique id for municipalities and states as municipalities with the same name are present in different states
+candidates_2008$unique_name_municipality<-paste(candidates_2008$ACRONYM_STATE.x,candidates_2008$NAME_MUNICIPALITY.x) # create group of treatment and control municipalities
+treat_control_sample<-as.data.frame(unique(candidates_2008$unique_name_municipality)) # export the previous group list to be used as filter in the profile_voters_sections
+profile_voters_sections<-subset(profile_voters_sections, unique_name_municipality %in% treat_control_sample$`unique(candidates_2008$unique_name_municipality)`) # restricting profile_voters_sections to the 253 trat_control_sample - treat_control_sample == unique(profile_voters_sections$unique_name_municipality), so 253 municipalities
 
 
 
+
+
+# map of municipalities BR - https://github.com/ipeaGIT/geobr ####
+# utils::remove.packages('geobr')
+# Read all municipalities in the country at a given year
+mun <- read_municipality(code_muni="all", year=2010)
+# plot municipalities together with voting sections
+ggplot() + 
+  geom_sf(data=mun, fill = NA) + scale_fill_gradientn(colours= brewer.pal(9, "RdYlGn"))+
+  geom_point(data = votes_per_candidate_name_per_section_geo, mapping = aes(x = longitude, y = latitude, colour = factor(ACRONYM_STATE)), size = 1) + 
+  coord_sf()+
+  theme(panel.grid.major = element_blank(), panel.background = element_blank(), panel.grid.minor = element_blank())+
+  labs(col="States")+
+  ggtitle("Brazil's voting precincts locations in 2010")
+
+#ggplot() + geom_sf(data=mun, fill = NA) + ggspatial::annotation_scale() +
+#  tema_mapa + geom_sf(size = 0.01)
+# ggsave('mapa.pdf', width = 15, height = 15, dpi = 100)
 
 ########################################################################################################
 #######################################################################################################
@@ -224,6 +259,7 @@ candidates_2008<- merge(votes_per_candidate_name_per_section, elected_mayors_200
 library(electionsBR)
 citation('electionsBR')
 df <- vote_mun_zone_local(2016)
+
 
   tema_mapa <-
     theme_bw() + # Escolhe o tema. Eu gosto do theme_bw() por ser bem simples/limpo
