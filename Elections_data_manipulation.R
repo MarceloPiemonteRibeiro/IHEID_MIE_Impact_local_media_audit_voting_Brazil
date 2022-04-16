@@ -12,7 +12,8 @@ library(tidyverse)
 library(Hmisc)
 # install.packages("lessR")
 library(lessR)
-library("dplyr")
+# install.packages("tidyverse")
+library(dplyr)
 library(tidyr)
 # install.packages("here")
 library(here) 
@@ -148,7 +149,7 @@ votes_per_candidate_name_per_section_geo$duplicate_id<-paste(votes_per_candidate
                                                             votes_per_candidate_name_per_section_geo$RESULT) # create an unique id to remove duplicates
 votes_per_candidate_name_per_section_geo<-votes_per_candidate_name_per_section_geo %>% distinct(duplicate_id,.keep_all = T) # remove duplicates
 votes_per_candidate_name_per_section_geo = subset(votes_per_candidate_name_per_section_geo, select= -c(AA_ELEICAO, DT_ELEICAO, DS_ELEICAO, DS_TIPO_SECAO_AGREGADA,
-                                                                                                       NR_LATITUDE, NR_LONGITUDE, id, duplicate_id)) # remove unused columns
+                                                                                                       NR_LATITUDE, NR_LONGITUDE, id, duplicate_id,QT_ELEITOR)) # remove unused columns
 
 # Elected candidates in 2004 who could participate in the subsequent election ####
 setwd("../votes_candidates_munzona_year_state_2004")
@@ -230,13 +231,40 @@ read_voters_profiles_sections = function(path) {
 profile_voters_sections$unique_name_municipality<-paste(profile_voters_sections$SG_UF,profile_voters_sections$NM_MUNICIPIO) # create unique id for municipalities and states as municipalities with the same name are present in different states
 candidates_2008$unique_name_municipality<-paste(candidates_2008$ACRONYM_STATE.x,candidates_2008$NAME_MUNICIPALITY.x) # create group of treatment and control municipalities
 treat_control_sample<-as.data.frame(unique(candidates_2008$unique_name_municipality)) # export the previous group list to be used as filter in the profile_voters_sections
-profile_voters_sections<-subset(profile_voters_sections, unique_name_municipality %in% treat_control_sample$`unique(candidates_2008$unique_name_municipality)`) # restricting profile_voters_sections to the 253 trat_control_sample - treat_control_sample == unique(profile_voters_sections$unique_name_municipality), so 253 municipalities
+profile_voters_sections<-subset(profile_voters_sections, unique_name_municipality %in% treat_control_sample$`unique(candidates_2008$unique_name_municipality)`) # restricting profile_voters_sections to the 253 treat_control_sample - treat_control_sample == unique(profile_voters_sections$unique_name_municipality), so 253 municipalities
 
+# re-organize the dataframe by rows
+# install.packages("tidyverse")
+library(dplyr)
 
-
-
+profile_voters_sections<-profile_voters_sections %>%
+  group_by(NM_MUNICIPIO, SG_UF, NR_SECAO) %>%
+  summarize(tot_voters = sum(QT_ELEITORES_PERFIL),
+            tot_male = sum(QT_ELEITORES_PERFIL[DS_GENERO == "MASCULINO"]),
+            share_male = sum(QT_ELEITORES_PERFIL[DS_GENERO == "MASCULINO"])/tot_voters,
+            share_semi_illit = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE == "LÊ E ESCREVE"] / tot_voters),
+            share_illit = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE == "ANALFABETO"] / tot_voters),
+            share_incomp_elementary = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE == "ENSINO FUNDAMENTAL INCOMPLETO"] / tot_voters),
+            share_elementary = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE == "ENSINO FUNDAMENTAL COMPLETO"] / tot_voters),
+            share_incomp_hschool = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE ==  "ENSINO MÉDIO INCOMPLETO"] / tot_voters),
+            share_hschool = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE ==  "ENSINO MÉDIO COMPLETO"] / tot_voters),
+            share_incomp_college = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE ==  "SUPERIOR INCOMPLETO"] / tot_voters),
+            share_college = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE ==  "ENSINO MÉDIO COMPLETO"] / tot_voters),
+            share_2030 = sum(QT_ELEITORES_PERFIL[DS_FAIXA_ETARIA == c("21 a 24 anos","25 a 29 anos")] / tot_voters),
+            share_3045 = sum(QT_ELEITORES_PERFIL[DS_FAIXA_ETARIA == c("30 a 34 anos","35 a 39 anos","40 a 44 anos")] / tot_voters),
+            share_4560 = sum(QT_ELEITORES_PERFIL[DS_FAIXA_ETARIA == c("45 a 49 anos","50 a 54 anos","55 a 59 anos")] / tot_voters),
+            share_60plus = sum(QT_ELEITORES_PERFIL[DS_FAIXA_ETARIA == c("60 a 64 anos","65 a 69 anos","70 a 74 anos","75 a 79 anos",
+                                                                        "80 a 84 anos","85 a 89 anos","90 a 94 anos","95 a 99 anos","100 anos ou mais")] / tot_voters),
+            share_upto20 = sum(QT_ELEITORES_PERFIL[DS_FAIXA_ETARIA == c("18 anos","19 anos","17 anos","16 anos","20 anos")] / tot_voters))
+# merge with candidates 2008 data
+profile_voters_sections$unique_name_municipality<-paste(profile_voters_sections$SG_UF,profile_voters_sections$NM_MUNICIPIO) # create unique id for municipalities and states as municipalities with the same name are present in different states
+profile_voters_sections<-merge(x=candidates_2008,y=profile_voters_sections, by.x=c("unique_name_municipality", "NUM_ELECT_SECTION"), by.y=c("unique_name_municipality", "NR_SECAO")) #merge with candidates 2008
+profile_voters_sections <-subset(profile_voters_sections, select = -c(tot_male,tot_voters,SG_UF,NM_MUNICIPIO, QT_ELEITOR_ELEICAO,unique_name_candidate,unique_name_municipality)) # subset dataset
 
 # map of municipalities BR - https://github.com/ipeaGIT/geobr ####
+library(geobr)
+library(ggplot2)
+library(RColorBrewer)
 # utils::remove.packages('geobr')
 # Read all municipalities in the country at a given year
 mun <- read_municipality(code_muni="all", year=2010)
@@ -252,6 +280,22 @@ ggplot() +
 #ggplot() + geom_sf(data=mun, fill = NA) + ggspatial::annotation_scale() +
 #  tema_mapa + geom_sf(size = 0.01)
 # ggsave('mapa.pdf', width = 15, height = 15, dpi = 100)
+
+# plot only the sections 
+ggplot() + 
+  geom_sf(data=mun, fill = NA) + scale_fill_gradientn(colours= brewer.pal(2, "RdYlGn"))+
+  geom_point(data = profile_voters_sections, mapping = aes(x = longitude, y = latitude, colour = factor(Elect_2008)), size = 1) + 
+  coord_sf()+
+  theme(panel.grid.major = element_blank(), panel.background = element_blank(), panel.grid.minor = element_blank())+
+  labs(col="Reelection")+
+  ggtitle("Brazil's voting precincts where mayors were re-elected or not")
+
+
+
+
+
+
+
 
 ########################################################################################################
 #######################################################################################################
