@@ -371,6 +371,7 @@ votes_per_precinct = merge(x=profile_voters_sections,y=drew_municipalities,by="N
 library(geobr)
 library(ggplot2)
 library(RColorBrewer)
+library(sf)
 # utils::remove.packages('geobr')
 # Read all municipalities in the country at a given year
 mun <- read_municipality(code_muni="all", year=2010)
@@ -384,7 +385,6 @@ ggplot() +
   labs(col="Reelection")+
   ggtitle("Brazil's 2008 and 2012 voting precincts where mayors were re-elected or not")
 
-
 # plot municipalities together with voting sections
 ggplot() + 
   geom_sf(data=mun, fill = NA) + scale_fill_gradientn(colours= brewer.pal(9, "RdYlGn"))+
@@ -394,101 +394,3 @@ ggplot() +
   labs(col="States")+
   ggtitle("Brazil's voting precincts locations in 2010")
 
-#ggplot() + geom_sf(data=mun, fill = NA) + ggspatial::annotation_scale() +
-#  tema_mapa + geom_sf(size = 0.01)
-# ggsave('mapa.pdf', width = 15, height = 15, dpi = 100)
-
-
-
-
-
-########################################################################################################
-#######################################################################################################
-###########################################################################################ignore below:
-library(electionsBR)
-citation('electionsBR')
-df <- vote_mun_zone_local(2016)
-
-
-  tema_mapa <-
-    theme_bw() + # Escolhe o tema. Eu gosto do theme_bw() por ser bem simples/limpo
-    theme(
-      axis.text.y = element_text(
-        angle = 90,
-        hjust = 0.5,
-        size = 8
-      ),
-      axis.text.x = element_text(size = 8),
-      axis.title.y = element_text(size = rel(0.8)),
-      axis.title.x = element_text(size = rel(0.8)),
-      panel.grid.major = element_line(
-        color = gray(0.9),
-        linetype = "dashed",
-        size = 0.1
-      ),
-      panel.background = element_rect(fill = "white") +
-        annotation_scale(location = "br", width_hint = 0.30)
-    ) # reference https://beatrizmilz.com/blog/2020-07-27-criando-mapas-com-os-pacotes-tidyverse-e-geobr/
-  
-  
-
-# create list of addresses
-library(tidygeocoder)
-# options(tidygeocoder.progress_bar = FALSE)
-
-# missing_sections %>%  geocode(street = street, city = NAME_MUNICIPALITY, state = ACRONYM_STATE.x, postalcode = NR_CEP, method = 'census', full_results = TRUE)
-missing_sections %>% geocode(street, method = 'osm', limit = 2,
-                             return_input = FALSE, full_results = F)
-
-# # install packages
-# install.packages("ggmap")
-# install.packages("tmaptools")
-# install.packages("RCurl")
-# install.packages("jsonlite")
-# install.packages("leaflet")
-# load packages
-library(ggmap)
-library(tmaptools)
-library(RCurl)
-library(jsonlite)
-library(leaflet)
-pubs <- c("AVENIDA JOAQUIM CAETANO DA SILVA")
-pubs_m <- pubs
-pubs_m[pubs_m=="AVENIDA JOAQUIM CAETANO DA SILVA"] <- "AVENIDA JOAQUIM CAETANO DA SILVA"
-pubs_m_df <- data.frame(Pubs = pubs_m, stringsAsFactors = FALSE)
-
-# geocoding the London pubs
-# "bar" is special phrase added to limit the search
-pubs_tmaptools <- geocode_OSM(paste(pubs_m, "bar", sep = " "),
-                              details = TRUE, as.data.frame = TRUE)
-
-# extracting from the result only coordinates and address
-pubs_tmaptools <- pubs_tmaptools[, c("lat", "lon", "display_name")]
-pubs_tmaptools <- cbind(Pubs = pubs_m_df[-10, ], pubs_tmaptools)
-
-# print the results
-PUBS_LIST<-pubs_tmaptools
-
-
-install.packages('tidygeocoder')
-devtools::install_github("jessecambon/tidygeocoder")
-library(dplyr, warn.conflicts = FALSE)
-library(tidygeocoder)
-some_addresses <- tibble::tribble(
-  ~name,                  ~addr,
-  "OIAPOQUE",          "AVENIDA JOAQUIM CAETANO DA SILVA, OIAPOQUE, AP",
-  "ABADIA DOS DOURADOS", "AV. SANTOS  , 281, ABADIA DOS DOURADOS, MG "
-)
-lat_longs <- some_addresses %>%
-  geocode(addr, method = 'osm', lat = latitude , long = longitude)
-
-# options(tidygeocoder.progress_bar = FALSE)
-library(dplyr, warn.conflicts = FALSE)
-geo(street = "AV. SANTOS  , 281", city = "ABADIA DOS DOURADOS",
-    state = "MG", country= "Brazil", method = "osm")
-
-sample_addresses %>% slice(1:2) %>%
-  geocode(addr, method = 'arcgis')
-sample_addresses %>% slice(8:9) %>%
-  geocode(addr, method = 'osm', limit = 2,
-          return_input = FALSE, full_results = F)
