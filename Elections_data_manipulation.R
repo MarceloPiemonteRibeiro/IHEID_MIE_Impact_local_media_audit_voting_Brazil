@@ -1,4 +1,10 @@
-# Precinct votes data
+# PIEMONTE RIBEIRO, Marcelo
+# Data replication - coding
+
+
+# ---------------------------------------------------------------------------------------------------------------------------#
+################################################### DATA MANIPULATION ########################################################
+# ---------------------------------------------------------------------------------------------------------------------------#
 
 rm(list = ls()) # clear environment
 # devtools::install_github("ipeaGIT/geobr", subdir = "r-package")
@@ -23,6 +29,7 @@ library("readxl")
 library("writexl")
 library(electionsBR)
 library(haven)
+library(lubridate)
 
 # Upload Brazilian elections 2008 data (source data: https://dadosabertos.tse.jus.br/dataset/resultados-2008)
 
@@ -306,6 +313,7 @@ read_voters_profiles_sections_12 = function(path) {
 profile_voters_sections_12$unique_name_municipality<-paste(profile_voters_sections_12$SG_UF,profile_voters_sections_12$NM_MUNICIPIO) # create unique id for municipalities and states as municipalities with the same name are present in different states
 candidates_2012$unique_name_municipality<-paste(candidates_2012$ACRONYM_STATE.x,candidates_2012$NAME_MUNICIPALITY.x) # create group of treatment and control municipalities
 treat_control_sample_2012<-as.data.frame(unique(candidates_2012$unique_name_municipality)) # export the previous group list to be used as filter in the profile_voters_sections
+
 profile_voters_sections_12<-subset(profile_voters_sections_12, unique_name_municipality %in% treat_control_sample_2012$`unique(candidates_2012$unique_name_municipality)`) # restricting profile_voters_sections to the 253 treat_control_sample - treat_control_sample_2012 == unique(profile_voters_sections_2012$unique_name_municipality), so 253 municipalities
 
 # re-organize the dataframe by rows
@@ -354,18 +362,57 @@ profile_voters_sections_12<-profile_voters_sections_12 %>%
 profile_voters_sections_08$unique_name_municipality<-paste(profile_voters_sections_08$SG_UF,profile_voters_sections_08$NM_MUNICIPIO) # create unique id for municipalities and states as municipalities with the same name are present in different states
 profile_voters_sections_08<-merge(x=candidates_2008,y=profile_voters_sections_08, by.x=c("unique_name_municipality", "NUM_ELECT_SECTION"), by.y=c("unique_name_municipality", "NR_SECAO")) #merge with candidates 2008
 profile_voters_sections_08 <-subset(profile_voters_sections_08, select = -c(tot_voters,SG_UF,NM_MUNICIPIO, QT_ELEITOR_ELEICAO,unique_name_candidate,unique_name_municipality)) # subset dataset
-
 profile_voters_sections_12$unique_name_municipality<-paste(profile_voters_sections_12$SG_UF,profile_voters_sections_12$NM_MUNICIPIO) # create unique id for municipalities and states as municipalities with the same name are present in different states
 profile_voters_sections_12<-merge(x=candidates_2012,y=profile_voters_sections_12, by.x=c("unique_name_municipality", "NUM_ELECT_SECTION"), by.y=c("unique_name_municipality", "NR_SECAO")) #merge with candidates 2012
 profile_voters_sections_12 <-subset(profile_voters_sections_12, select = -c(tot_voters,SG_UF,NM_MUNICIPIO, QT_ELEITOR_ELEICAO,unique_name_candidate,unique_name_municipality)) # subset dataset
-
 # bind profile voters sections
 profile_voters_sections_08<-profile_voters_sections_08 %>% rename(Elected = Elect_2008) # making the same name of columns to rbind
 profile_voters_sections_12<-profile_voters_sections_12 %>% rename(Elected = Elect_2012) # making the same name of columns to rbind
-profile_voters_sections<-rbind(profile_voters_sections_08,profile_voters_sections_12) %>% rename(NAME_MUNICIPALITY = NAME_MUNICIPALITY.x)
+profile_voters_sections<-rbind(profile_voters_sections_08,profile_voters_sections_12) %>% rename(NAME_MUNICIPALITY = NAME_MUNICIPALITY.x, UF = ACRONYM_STATE.x)
 
-# Merge with corruption data from Avis, E., Ferraz, C., & Finan, F. (2018) dataset
-votes_per_precinct = merge(x=profile_voters_sections,y=drew_municipalities,by="NAME_MUNICIPALITY",all.x=TRUE) # the dataset contains the share of votes of the reelection candidatures per precinct as well as the corruption levels
+# Merge with corruption data from Avis, E., Ferraz, C., & Finan, F. (2018) dataset ####
+votes_per_precinct = merge(x=profile_voters_sections,y=drew_municipalities,by=c("NAME_MUNICIPALITY","UF"),all.x=TRUE) # the dataset contains the share of votes of the reelection candidatures per precinct as well as the corruption levels
+votes_per_precinct<-na.omit(votes_per_precinct) # Avis, E., Ferraz, C., & Finan, F. (2018) does not contain corruption in their dataset - remove
+# remove unused columns
+votes_per_precinct = subset(votes_per_precinct, select = -c(NUM_ROUND.x, CD_TIPO_LOCAL, DS_TIPO_LOCAL, CD_SITU_LOCAL_VOTACAO,DS_SITU_LOCAL_VOTACAO,
+                                CD_SITU_ZONA, DS_SITU_ZONA, CD_SITU_SECAO, DS_SITU_SECAO, CD_SITU_LOCALIDADE,
+                                DS_SITU_LOCALIDADE, T_SUPER25M, n_nbr,n_nbraudited, party_id, puf_treatment) )
+# export
+write_xlsx(votes_per_precinct,"C:/Users/Ribeiro/OneDrive/Documents/OneDrive/IHEID/Dissertation/Data Sources/Voting data/votes_per_precinct.xlsx")
+
+
+# ---------------------------------------------------------------------------------------------------------------------------#
+################################################### ANALYSIS #################################################################
+# ---------------------------------------------------------------------------------------------------------------------------#
+
+# Summary statistics ####
+sum(table(drew_municipalities$UF)) # between 2006-2013, 1020 municipalities were audited
+unique(drew_municipalities$NAME_MUNICIPALITY) # with 962 unique municipalities (then 328 municipalities were audited twice)
+unique(votes_per_precinct$NAME_MUNICIPALITY) # 293 had mayors who ran for re-election.
+
+# Figure 1 ####
+# add dates of the lotteries according to https://www.gov.br/cgu/pt-br/assuntos/auditoria-e-fiscalizacao/programa-de-fiscalizacao-em-entes-federativos/edicoes-anteriores/municipios?b_start:int=0
+drew_municipalities<-drew_municipalities %>% mutate(lottery_date =
+                     case_when(sorteio == 22 ~ as.Date("2006/07/19"), 
+                               sorteio == 23 ~ as.Date("2007/05/09"),
+                               sorteio == 24 ~ as.Date("2007/07/24"),
+                               sorteio == 25 ~ as.Date("2007/10/09"),
+                               sorteio == 26 ~ as.Date("2008/04/30"),
+                               sorteio == 27 ~ as.Date("2008/10/29"),
+                               sorteio == 28 ~ as.Date("2009/05/12"),
+                               sorteio == 29 ~ as.Date("2009/08/17"),
+                               sorteio == 30 ~ as.Date("2009/10/05"),
+                               sorteio == 31 ~ as.Date("2010/03/01"),
+                               sorteio == 32 ~ as.Date("2010/05/10"),
+                               sorteio == 33 ~ as.Date("2010/07/26"),
+                               sorteio == 34 ~ as.Date("2011/08/15"),
+                               sorteio == 35 ~ as.Date("2011/10/03"),
+                               sorteio == 36 ~ as.Date("2012/07/23"),
+                               sorteio == 37 ~ as.Date("2012/10/08"),
+                               sorteio == 38 ~ as.Date("2013/03/04")))  %>%
+                               mutate(year = year(lottery_date))                                      
+plot(factor(drew_municipalities$year),ylim = c(0, 200),
+     xlab = "Year", ylab = "N°municipalities audited", border = "black", col="lightgrey") # number of audited municipalities per year
 
 # map of municipalities BR - https://github.com/ipeaGIT/geobr ####
 library(geobr)
@@ -379,7 +426,7 @@ mun <- read_municipality(code_muni="all", year=2010)
 # plot only the sections 
 ggplot() + 
   geom_sf(data=mun, fill = NA) + scale_fill_gradientn(colours= brewer.pal(2, "RdYlGn"))+
-  geom_point(data = profile_voters_sections, mapping = aes(x = longitude, y = latitude, colour = factor(Elected)), size = 1) + 
+  geom_point(data = votes_per_precinct, mapping = aes(x = longitude, y = latitude, colour = factor(Elected)), size = 1) + 
   coord_sf()+
   theme(panel.grid.major = element_blank(), panel.background = element_blank(), panel.grid.minor = element_blank())+
   labs(col="Reelection")+
@@ -388,7 +435,7 @@ ggplot() +
 # plot municipalities together with voting sections
 ggplot() + 
   geom_sf(data=mun, fill = NA) + scale_fill_gradientn(colours= brewer.pal(9, "RdYlGn"))+
-  geom_point(data = profile_voters_sections, mapping = aes(x = longitude, y = latitude, colour = factor(ACRONYM_STATE.x)), size = 1) + 
+  geom_point(data = votes_per_precinct, mapping = aes(x = longitude, y = latitude, colour = factor(UF)), size = 1) + 
   coord_sf()+
   theme(panel.grid.major = element_blank(), panel.background = element_blank(), panel.grid.minor = element_blank())+
   labs(col="States")+
