@@ -30,6 +30,7 @@ library("writexl")
 library(electionsBR)
 library(haven)
 library(lubridate)
+library("reshape2")
 
 # Upload Brazilian elections 2008 data (source data: https://dadosabertos.tse.jus.br/dataset/resultados-2008)
 
@@ -388,7 +389,7 @@ write_xlsx(votes_per_precinct,"C:/Users/Ribeiro/OneDrive/Documents/OneDrive/IHEI
 # Summary statistics ####
 sum(table(drew_municipalities$UF)) # between 2006-2013, 1020 municipalities were audited
 unique(drew_municipalities$NAME_MUNICIPALITY) # with 962 unique municipalities (then 328 municipalities were audited twice)
-unique(votes_per_precinct$NAME_MUNICIPALITY) # 293 had mayors who ran for re-election.
+first_term_drew_mun<-as.data.frame(unique(votes_per_precinct$NAME_MUNICIPALITY)) # 293 had mayors who ran for re-election.
 
 # Figure 1 ####
 # add dates of the lotteries according to https://www.gov.br/cgu/pt-br/assuntos/auditoria-e-fiscalizacao/programa-de-fiscalizacao-em-entes-federativos/edicoes-anteriores/municipios?b_start:int=0
@@ -411,8 +412,87 @@ drew_municipalities<-drew_municipalities %>% mutate(lottery_date =
                                sorteio == 37 ~ as.Date("2012/10/08"),
                                sorteio == 38 ~ as.Date("2013/03/04")))  %>%
                                mutate(year = year(lottery_date))                                      
-plot(factor(drew_municipalities$year),ylim = c(0, 200),
+plot(factor(drew_municipalities$year),ylim = c(0, 200), yaxp=c(0, 180,6), 
      xlab = "Year", ylab = "N°municipalities audited", border = "black", col="lightgrey") # number of audited municipalities per year
+abline(h=c(60,120,180),  lty = 3)
+
+# Figure 2 ####
+drew_municipalities_first_terms<- drew_municipalities %>% 
+  filter(NAME_MUNICIPALITY %in% first_term_drew_mun$`unique(votes_per_precinct$NAME_MUNICIPALITY)`) # keeping municipalities audited twice 
+drew_municipalities_first_terms<- drew_municipalities_first_terms %>%
+  distinct(NAME_MUNICIPALITY, drew_municipalities_first_terms$year != 2013, .keep_all = T) %>% select(1:26) # but only those in 2013
+# The 2008 elections happened on the 5th October (1st round) and 26th October (2nd round)
+# The 2012 elections happened on the 7th October (1st round) and 28th October (2nd round)
+
+drew_municipalities_first_terms %>%
+#  mutate(treat_condition = if_else(radio_am==1, 
+#                                   "Radio municipality (treatment)", 
+#                                   "No radio (control)")) %>% 
+  ggplot(aes(lottery_date, exp(lfalha_total))) + #color = treat_condition
+  stat_summary(fun = "mean", geom = "line") +
+  labs(x = "Month/Year", y = "Acts of corruption, (mean)") +
+  geom_vline(xintercept = as.Date(c("2008-10-05","2012-10-05")),linetype="dashed")+ 
+  scale_x_date(date_breaks = "6 months", date_labels = "%m/%y")+
+  geom_smooth(span = 0.5)+
+  annotate(geom = "text", x = as.Date("2008-11-30"), y = 35, label = "2008 elections", hjust = "left")+
+  annotate(geom = "text", x = as.Date("2012-08-30"), y = 85, label = "2012 elections", hjust = "right")+
+  theme_minimal()
+#ggplot(drew_municipalities_first_terms, aes(x = as.factor(lottery_date), y = lfalha_total)) + geom_boxplot()+ theme_minimal()  
+
+# Figure 3 ####
+drew_municipalities_first_terms %>%
+   mutate(treat_condition = if_else(radio_am==1,
+                                    "Radio in the municipality",
+                                    "No local radio present")) %>%
+  ggplot(aes(lottery_date, exp(lfalha_total),color = treat_condition)) + 
+  stat_summary(fun = "mean") +
+  labs(x = "Month/Year", y = "Acts of corruption, (mean)") +
+  geom_vline(xintercept = as.Date(c("2008-10-05","2012-10-05")),linetype="dashed")+ 
+  scale_x_date(date_breaks = "6 months", date_labels = "%m/%y")+
+  scale_color_discrete(name = "Treatment condition")+
+  geom_smooth(span = 0.6, aes(fill = treat_condition),se=FALSE) +
+  guides(fill="none")+
+  annotate(geom = "text", x = as.Date("2008-11-30"), y = 35, label = "2008 elections", hjust = "left")+
+  annotate(geom = "text", x = as.Date("2012-08-30"), y = 85, label = "2012 elections", hjust = "right")+
+  theme_bw()+
+  theme(legend.position = c(0.14, 0.88))
+
+# Figure 4 ####
+share_votes_by_corruption_levels<-subset(votes_per_precinct,sorteio<32)
+library(dplyr)
+share_votes_by_corruption_levels<-share_votes_by_corruption_levels %>%
+  group_by(NAME_MUNICIPALITY, UF) %>%
+  summarize(relection_rate = ((sum(Elected)/nrow(share_votes_by_corruption_levels))*nrow(share_votes_by_corruption_levels))/100, # counts the n°of sections won by the candidate divided by all the sections and it multiples the latter calculation by the number of section (this penalizes municipalities with few sections)
+            mean_lfalha_total= mean(lfalha_total),
+            mean_lmismanagement= mean(lmismanagement),
+            mean_illiterate= mean(share_illit),
+            mean_semi_illit= mean(share_semi_illit),
+            draw=mean(sorteio),
+            share_vote_mean = mean(Share)) 
+share_votes_by_corruption_levels$relection_rate<-
+  (share_votes_by_corruption_levels$relection_rate-min(share_votes_by_corruption_levels$relection_rate))/ # normalize 0-1 re-election rates
+   (max(share_votes_by_corruption_levels$relection_rate)-min(share_votes_by_corruption_levels$relection_rate)) 
+share_votes_by_corruption_levels$treat<-ifelse(share_votes_by_corruption_levels$draw<27,"pre-elections","post-elections")
+# Plot:
+plot_share_votes_by_corruption_levels = share_votes_by_corruption_levels %>% 
+  mutate(ds = as.factor(treat)) %>% # Temporary changes the type of ds from integer to factor so ggplot understands
+  ggplot(aes(x = mean_lfalha_total, y = relection_rate, group = ds, col = ds)) +
+  # stat_summary(fun = "mean") +
+  # stat_summary(geom = "line") + # Displays the mean as a line
+  # stat_summary(geom = "point") + # Displays the mean as a point
+  labs(col = "Audited:") + # Changes the name from "ds" to "Group" in the legend
+  theme_classic() + # Changes the theme
+  geom_smooth(span = 0.4, aes(fill = treat),se=F) +
+  labs(x = "Mean acts of corruption (logarithm scale)", y = "Re-election rates, (mean)") +
+  guides(fill="none")+
+  scale_y_continuous(labels = scales::percent)+
+  theme(legend.position = c(0.24, 0.88)) # Change aspect ratio of the plot. Not necessary, but some prefer it.
+plot_share_votes_by_corruption_levels
+
+
+# "treatment" originally contained in the dataset from Avis, E., Ferraz, C., & Finan, F. (2018) and here refers to municipalities audited twice or once
+# create a new "treatment" to consider municipalities audited before and after the respective elections of 2008 and 2012
+
 
 # map of municipalities BR - https://github.com/ipeaGIT/geobr ####
 library(geobr)
@@ -441,3 +521,18 @@ ggplot() +
   labs(col="States")+
   ggtitle("Brazil's voting precincts locations in 2010")
 
+
+
+
+
+# IGNORE ####
+# consider only mun audited once
+# drew_unique_municipalities_first_terms<- drew_municipalities %>% 
+#   filter(NAME_MUNICIPALITY %in% first_term_drew_mun$`unique(votes_per_precinct$NAME_MUNICIPALITY)`) %>% # select municipalities ran by incumbents trying their re-election
+#   distinct(NAME_MUNICIPALITY, .keep_all= TRUE) # keeping only municipalities that were audited once. For those audited twice, only the observation regarding the first audited was kept
+# drew_unique_municipalities_first_terms %>%
+#   ggplot(aes(lottery_date, lfalha_total)) +
+#   stat_summary(fun = "mean", geom = "line") +
+#   labs(x = "Date", y = "Log falha total, Average") +
+#   geom_vline(xintercept = as.Date(c("2008-10-26","2012-10-26")))+ 
+#   theme_minimal()
