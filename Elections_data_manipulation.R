@@ -6,6 +6,7 @@
 ################################################### DATA MANIPULATION ########################################################
 # ---------------------------------------------------------------------------------------------------------------------------#
 
+# Libraries and functions ####
 rm(list = ls()) # clear environment
 # devtools::install_github("ipeaGIT/geobr", subdir = "r-package")
 # install.packages("ggspatial")
@@ -31,6 +32,36 @@ library(electionsBR)
 library(haven)
 library(lubridate)
 library("reshape2")
+# devtools::install_github("tbrugz/ribge")
+library(ribge)
+# install.packages("splitstackshape")
+library(splitstackshape)
+# install.packages("sidrar")
+library(sidrar) # only PNAD from 2012 onwards has relevant municipal level
+# devtools::install_github("lucasmation/microdadosBrasil", force = T)
+# library('microdadosBrasil') # https://www.rdocumentation.org/packages/microdadosBrasil/versions/0.0.0.9000
+# install.packages("vtable")                                                 
+library(vtable)
+library(stargazer)
+library(car)
+library(hrbrthemes)
+library(plyr)
+library(estimatr)
+library(margins)
+library(mfx)
+library(skedastic)
+library(jtools)
+library(AER)
+library(pander)
+library(sandwich)
+library(texreg)
+library(AICcmodavg)
+#install.packages("leaps")
+library(leaps)
+# functions
+source("VIF.R")
+source("ProcStep.R")
+source("GlobalCrit.R")
 
 # Upload Brazilian elections 2008 data (source data: https://dadosabertos.tse.jus.br/dataset/resultados-2008)
 
@@ -319,12 +350,11 @@ profile_voters_sections_12<-subset(profile_voters_sections_12, unique_name_munic
 
 # re-organize the dataframe by rows
 # install.packages("tidyverse")
-install.packages("dplyr")
-library(dplyr)
+
 # 2008
 profile_voters_sections_08<-profile_voters_sections_08 %>%
-  group_by(NM_MUNICIPIO, SG_UF, NR_SECAO) %>%
-  summarize(tot_voters = sum(QT_ELEITORES_PERFIL),
+  dplyr::group_by(NM_MUNICIPIO, SG_UF, NR_SECAO) %>%
+  dplyr::summarize(tot_voters = sum(QT_ELEITORES_PERFIL),
             share_male = sum(QT_ELEITORES_PERFIL[DS_GENERO == "MASCULINO"])/tot_voters,
             share_semi_illit = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE == "LÊ E ESCREVE"] / tot_voters),
             share_illit = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE == "ANALFABETO"] / tot_voters),
@@ -340,10 +370,14 @@ profile_voters_sections_08<-profile_voters_sections_08 %>%
             share_4560 = sum(QT_ELEITORES_PERFIL[CD_FAIXA_ETARIA == c(4549,5054,5559)] / tot_voters),
             share_60plus = sum(QT_ELEITORES_PERFIL[CD_FAIXA_ETARIA == c(6064,6569,7074,7579,
                                                                         8084,8589,9094,9599,9999)] / tot_voters))
+# if error re-install dplyr
+# install.packages("dplyr")
+# library(dplyr)
+
 # 2012
 profile_voters_sections_12<-profile_voters_sections_12 %>%
-  group_by(NM_MUNICIPIO, SG_UF, NR_SECAO) %>%
-  summarize(tot_voters = sum(QT_ELEITORES_PERFIL),
+  dplyr::group_by(NM_MUNICIPIO, SG_UF, NR_SECAO) %>%
+  dplyr::summarize(tot_voters = sum(QT_ELEITORES_PERFIL),
             share_male = sum(QT_ELEITORES_PERFIL[DS_GENERO == "MASCULINO"])/tot_voters,
             share_semi_illit = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE == "LÊ E ESCREVE"] / tot_voters),
             share_illit = sum(QT_ELEITORES_PERFIL[DS_GRAU_ESCOLARIDADE == "ANALFABETO"] / tot_voters),
@@ -379,52 +413,207 @@ votes_per_precinct = subset(votes_per_precinct, select = -c(NUM_ROUND.x, CD_TIPO
                                 CD_SITU_ZONA, DS_SITU_ZONA, CD_SITU_SECAO, DS_SITU_SECAO, CD_SITU_LOCALIDADE,
                                 DS_SITU_LOCALIDADE, T_SUPER25M, n_nbr,n_nbraudited, party_id, puf_treatment) )
 # export
-write_xlsx(votes_per_precinct,"C:/Users/Ribeiro/OneDrive/Documents/OneDrive/IHEID/Dissertation/Data Sources/Voting data/votes_per_precinct.xlsx")
+# write_xlsx(votes_per_precinct,"C:/Users/Ribeiro/OneDrive/Documents/OneDrive/IHEID/Dissertation/Data Sources/Voting data/votes_per_precinct.xlsx")
+
+# Controls ####
+# education levels ####
+education_levels_municipalities<-get_sidra(api = "/t/3540/n6/all/v/1000140/p/all/c1568/9493,9494,9495,99713/c1/0/c2/0/c86/0/c58/0/d/v1000140%202")
+education_levels_municipalities<-reshape(education_levels_municipalities, idvar = "Município", timevar = "Nível de instrução", direction = "wide", v.names="Valor") %>% 
+  select("Unidade de Medida",Município, "Município (Código)", "Unidade de Medida", Ano,
+         "Valor.Superior completo","Valor.Médio completo e superior incompleto", "Valor.Fundamental completo e médio incompleto",
+         "Valor.Sem instrução e fundamental incompleto") 
+education_levels_municipalities$state<-str_sub(education_levels_municipalities$Município,start=-2,end=-1) 
+education_levels_municipalities$Município <-substr(education_levels_municipalities$Município,1,nchar(education_levels_municipalities$Município)-4)
+
+# employment ####
+employment_levels_municipalities<-get_sidra(api="/t/2031/n6/all/v/1000696/p/last%201/c11913/0,96166,96167,96169,96170,96171,96173/d/v1000696%202")
+employment_levels_municipalities<-reshape(employment_levels_municipalities, idvar = "Município", 
+                                          timevar = "Posição na ocupação e categoria do emprego no trabalho principal", direction = "wide", v.names="Valor") %>% 
+  select("Unidade de Medida",Município, "Município (Código)", Ano,
+         "Valor.Conta própria","Valor.Empregado", "Valor.Empregado - com carteira de trabalho assinada",
+         "Valor.Empregado - outro sem carteira de trabalho assinada","Valor.Empregador", 
+         "Valor.Trabalhador na produção para o próprio consumo") 
+employment_levels_municipalities$state<-str_sub(employment_levels_municipalities$Município,start=-2,end=-1) 
+employment_levels_municipalities$Município <-substr(employment_levels_municipalities$Município,1,nchar(employment_levels_municipalities$Município)-4)
+
+# urban-rural ####
+urban_rural_shares_municipalities<-get_sidra(api="/t/1309/n6/all/v/1000093/p/last%201/c2/0/c11277/0,90749,90752,90754/d/v1000093%202")
+urban_rural_shares_municipalities<-reshape(urban_rural_shares_municipalities, idvar = "Município", 
+                                          timevar = "Situação e localização da área", direction = "wide", v.names="Valor") %>% 
+  select("Unidade de Medida",Município, "Município (Código)", Ano,
+         "Valor.Rural - aglomerado - povoado", "Valor.Rural - área rural (exceto aglomerado)",
+         "Valor.Urbana - cidade ou vila - área urbanizada") 
+urban_rural_shares_municipalities$state<-str_sub(urban_rural_shares_municipalities$Município,start=-2,end=-1) 
+urban_rural_shares_municipalities$Município <-substr(urban_rural_shares_municipalities$Município,1,nchar(urban_rural_shares_municipalities$Município)-4)
+
+# illiteracy rates ####
+setwd("./controls")
+illiteracy_rates_municipalities = read.csv("illiteracy_rates_2010_municipalities_tabnet_datasus.csv", skip = 3, header = T, sep=";") %>%
+     slice(-c(5569, 5568, 5567, 5566))
+illiteracy_rates_municipalities['Município (Código)']<-str_sub(illiteracy_rates_municipalities$Município,start=1,end=6)
+illiteracy_rates_municipalities$Município<-substring(illiteracy_rates_municipalities$Município,8)
+
+# gdp per capita ####
+gdp_capita_municipalities = read.csv("gdp_per_capita_2008_municipalities_tabnet_datasus.csv", skip = 3, header = T, sep=";") %>%
+  slice(-c(5577, 5576, 5575, 5574, 5573, 5572, 5571, 5570, 5569, 5568, 5567, 5566, 5565))
+gdp_capita_municipalities['Município (Código)']<-str_sub(gdp_capita_municipalities$Município,start=1,end=6)
+gdp_capita_municipalities$Município<-substring(gdp_capita_municipalities$Município,8)
+
+# unemployment rates ####
+unemployment_rates_municipalities = read.csv("unemployment_rates_2010_municipalities_tabnet_datasus.csv", skip = 3, header = T, sep=";") %>%
+  slice(-c(5557,5556, 5555, 5554, 5553, 5552, 5551, 5550))
+unemployment_rates_municipalities['Município (Código)']<-str_sub(unemployment_rates_municipalities$Município,start=1,end=6)
+unemployment_rates_municipalities$Município<-substring(unemployment_rates_municipalities$Município,8)
+
+# income levels <1/2 min wage ####
+perc_pop_income_less_half_minw_municipalities = read.csv("perctg_population_income_less_half_min_wage_2010_municipalities_tabnet_datasus.csv", skip = 3, header = T, sep=";") %>%
+  slice(-c(5575, 5574, 5573, 5572, 5571, 5570, 5569, 5568, 5567, 5566))
+perc_pop_income_less_half_minw_municipalities['Município (Código)']<-str_sub(perc_pop_income_less_half_minw_municipalities$Município,start=1,end=6)
+perc_pop_income_less_half_minw_municipalities$Município<-substring(perc_pop_income_less_half_minw_municipalities$Município,8)
+
+# income levels <1/4 min wage ####
+perc_pop_income_less_quarter_minw_municipalities = read.csv("perctg_population_income_less_quarter_of_min_wage_2010_municipalities_tabnet_datasus.csv", skip = 3, header = T, sep=";") %>%
+  slice(-c(5575, 5574, 5573, 5572, 5571, 5570, 5569, 5568, 5567, 5566))
+perc_pop_income_less_quarter_minw_municipalities['Município (Código)'] <-str_sub(perc_pop_income_less_quarter_minw_municipalities$Município,start=1,end=6)
+perc_pop_income_less_quarter_minw_municipalities$Município<-substring(perc_pop_income_less_quarter_minw_municipalities$Município,8) 
+
+# assemble control variables together
+controls_sidra<-Reduce(function(x, y) merge(x, y, all=TRUE), list(education_levels_municipalities, employment_levels_municipalities, urban_rural_shares_municipalities))
+controls_sidra$`Município (Código)`<- substr(controls_sidra$`Município (Código)`, 1, 6)
+controls_datasus<-Reduce(function(x, y) merge(x, y, all=TRUE), list(gdp_capita_municipalities, illiteracy_rates_municipalities, perc_pop_income_less_half_minw_municipalities,
+                                                                    perc_pop_income_less_quarter_minw_municipalities, unemployment_rates_municipalities)) 
+controls<-merge(controls_sidra,controls_datasus, by="Município (Código)")
+controls$NAME_MUNICIPALITY<-toupper(controls$Município.x) # upper case municipality names
+controls$NAME_MUNICIPALITY <-substr(controls$NAME_MUNICIPALITY,1,nchar(controls$NAME_MUNICIPALITY)-1) # remove extra blank space 
+
+# Municipal level dataset ####
+# read the 2004 elections results
+setwd("./votes_candidates_munzona_year_state_2004")
+mayors_2004 = map_dfr(votes_municipalities_sections_2004, read_votes_municipalities_sections_2004)  # combine datasets informing candidates of 2004
+# create vote share, margin of victory elections 2004
+mayors_2004<-mayors_2004 %>% 
+  group_by(ACRONYM_STATE, NAME_MUNICIPALITY) %>% 
+  mutate(
+    share_vote_04 = Total / sum(Total),
+    margin_victory_04 = ifelse(Total == max(Total), max(Total) / min(Total) - 1, 1 - max(Total) / min(Total)),
+  ) %>% 
+  ungroup()
+mayors_2004$elected_04<-ifelse(mayors_2004$RESULT=="ELEITO",1,0) # dummy if elected
+elected_mayors_2004_mun<-mayors_2004[mayors_2004$RESULT == "ELEITO",] # 5559 rows - in 2004, 5560 municipalities including the capital state DF ()
+# create vote shares, margin victory elections 2008
+pol_performance_candidates_2008<-votes_per_candidate_2008 %>% 
+  group_by(ACRONYM_STATE, NAME_MUNICIPALITY) %>% 
+  mutate(
+    share_vote_08 = Total / sum(Total),
+    margin_victory_08 = ifelse(Total == max(Total), max(Total) / min(Total) - 1, 1 - max(Total) / min(Total)),
+  ) %>% 
+  ungroup()
+pol_performance_candidates_2008$elected_08<-ifelse(pol_performance_candidates_2008$RESULT=="ELEITO",1,0) # dummy if elected
+pol_performance_candidates_2008$unique_id<-paste(pol_performance_candidates_2008$NAME_MUNICIPALITY, pol_performance_candidates_2008$ACRONYM_STATE)
+
+# merge with Avis & Ferraz 2018 dataset 
+# add dates of the lotteries according to https://www.gov.br/cgu/pt-br/assuntos/auditoria-e-fiscalizacao/programa-de-fiscalizacao-em-entes-federativos/edicoes-anteriores/municipios?b_start:int=0
+drew_municipalities<-drew_municipalities %>% mutate(lottery_date =
+                                                      case_when(sorteio == 22 ~ as.Date("2006/07/19"), 
+                                                                sorteio == 23 ~ as.Date("2007/05/09"),
+                                                                sorteio == 24 ~ as.Date("2007/07/24"),
+                                                                sorteio == 25 ~ as.Date("2007/10/09"),
+                                                                sorteio == 26 ~ as.Date("2008/04/30"),
+                                                                sorteio == 27 ~ as.Date("2008/10/29"),
+                                                                sorteio == 28 ~ as.Date("2009/05/12"),
+                                                                sorteio == 29 ~ as.Date("2009/08/17"),
+                                                                sorteio == 30 ~ as.Date("2009/10/05"),
+                                                                sorteio == 31 ~ as.Date("2010/03/01"),
+                                                                sorteio == 32 ~ as.Date("2010/05/10"),
+                                                                sorteio == 33 ~ as.Date("2010/07/26"),
+                                                                sorteio == 34 ~ as.Date("2011/08/15"),
+                                                                sorteio == 35 ~ as.Date("2011/10/03"),
+                                                                sorteio == 36 ~ as.Date("2012/07/23"),
+                                                                sorteio == 37 ~ as.Date("2012/10/08"),
+                                                                sorteio == 38 ~ as.Date("2013/03/04")))  %>%
+                                                      mutate(year = year(lottery_date))         
+drew_municipalities$unique_id<-paste(drew_municipalities$NAME_MUNICIPALITY, drew_municipalities$UF) # municipalities audited unique id
+# filter the municipalities audited
+pol_performance_candidates_2008<- pol_performance_candidates_2008 %>% 
+  filter(NAME_MUNICIPALITY %in% unique(drew_municipalities$NAME_MUNICIPALITY))
+# verify names candidates
+name_mayors_2008<-as.data.frame(table(pol_performance_candidates_2008$NAME_CANDIDATE)) # few candidates with the same name, from the same state but different municipalities
+name_mayors_2004<-as.data.frame(table(elected_mayors_2004_mun$NAME_CANDIDATE)) # few candidates with the same name, but they were running in different states
+# merge candidates 2008 and incumbents (mayors trying the re-election, then elected in 2004)
+candidates_2008_mun<-merge(x=pol_performance_candidates_2008,y=elected_mayors_2004_mun,by.x=c("NAME_CANDIDATE", "ACRONYM_STATE"),
+                           by.y =c("NAME_CANDIDATE", "ACRONYM_STATE") , all = F)
+candidates_2008_mun<-candidates_2008_mun[-c(64, 423, 323), ] # malhador SE, rio branco AC, montes claros MG had double entries (2nd round)
+# !!! correct these 3 municipalities in pol_performance
+
+# repeat the procedure for 2012 vs 2008
+mayors_2008<-subset(pol_performance_candidates_2008, elected_08==1) # keep only elected mayors in the 2008 elections
+votes_per_eligible_candidate_2012<-subset(votes_per_candidate_2012, Total !=0) #drop ineligible candidates
+# calculate margins and share votes
+pol_performance_candidates_2012<-votes_per_eligible_candidate_2012 %>% 
+  group_by(ACRONYM_STATE, NAME_MUNICIPALITY) %>% 
+  mutate(
+    share_vote_12 = Total / sum(Total),
+    margin_victory_12 = ifelse(Total == max(Total), max(Total) / min(Total) - 1, 1 - max(Total) / min(Total)),
+  ) %>% 
+  ungroup()
+pol_performance_candidates_2012$elected_12<-ifelse(pol_performance_candidates_2012$RESULT=="ELEITO",1,0) # dummy if elected
+pol_performance_candidates_2012$unique_id<-paste(pol_performance_candidates_2012$NAME_MUNICIPALITY, pol_performance_candidates_2012$ACRONYM_STATE)
+pol_performance_candidates_2012<- pol_performance_candidates_2012 %>% 
+  filter(NAME_MUNICIPALITY %in% unique(drew_municipalities$NAME_MUNICIPALITY)) # filter the audited municipalities
+# merge canidates 2012 with incumbents (candidates trying re-election)
+candidates_2012_mun<-merge(x=pol_performance_candidates_2012,y=mayors_2008,by.x=c("NAME_CANDIDATE", "ACRONYM_STATE"),
+                           by.y =c("NAME_CANDIDATE", "ACRONYM_STATE") , all = F)
+candidates_2008_mun<-candidates_2008_mun[-c(6, 103, 288), ] # santo andré SP, tucunduva RS
+# remove agua preta PE because of https://www.tse.jus.br/imprensa/noticias-tse/2013/Maio/agua-preta-pe-tera-novas-eleicoes
+# !!! correct these 3 municipalities in pol_performance
+
+# Merge 2008 and 2012 incumbents trying re-election
+candidates_2008_mun = subset(candidates_2008_mun, select = -c(NUM_BALLOT_CANDIDATE.x, NUM_ROUND.x, CODE_SIT_CAND_TOT.x,
+                                                              elected_08,NUM_BALLOT_CANDIDATE.y,NUM_ROUND.y, CODE_SIT_CAND_TOT.y,
+                                                              NAME_MUNICIPALITY.y, elected_04, unique_id)) # remove unecessary columns
+candidates_2008_mun<- candidates_2008_mun %>% dplyr::rename(YEAR_ELECTION_CANDIDATURE = YEAR_ELECTION.x, RESULT_CANDIDATURE= RESULT.x, Total_votes=Total.x, 
+                                                            SHARE_VOTES_CANDIDATURE =share_vote_08, MARGIN_VICTORY_CANDIDATURE= margin_victory_08,
+                                                            YEAR_PREVIOUS_CANDIDATURE= YEAR_ELECTION.y, RESULT_PREVIOUS_CANDIDATURE= RESULT.y, PREVIOUS_PARTY=PARTY_ACRONYM.y,
+                                                            PREVIOUS_PARTY_N=PARTY_NUMBER.y, Total_votes_previous =Total.y, SHARE_VOTES_PREVIOUS_CANDID=share_vote_04,
+                                                            MARGIN_VICTORY_PREVIOUS_CANDID=margin_victory_04) # rename
+candidates_2012_mun = subset(candidates_2012_mun, select = -c(NUM_BALLOT_CANDIDATE.x, NUM_ROUND.x, CODE_SIT_CAND_TOT.x,
+                                                              elected_12,NUM_BALLOT_CANDIDATE.y,NUM_ROUND.y, CODE_SIT_CAND_TOT.y,
+                                                              NAME_MUNICIPALITY.y, elected_08, unique_id.y, unique_id.x)) # remove unecessary columns
+candidates_2012_mun<-candidates_2012_mun %>% dplyr::rename(YEAR_ELECTION_CANDIDATURE = YEAR_ELECTION.x, RESULT_CANDIDATURE= RESULT.x, Total_votes=Total.x, 
+                                                           SHARE_VOTES_CANDIDATURE =share_vote_12, MARGIN_VICTORY_CANDIDATURE= margin_victory_12,
+                                                           YEAR_PREVIOUS_CANDIDATURE= YEAR_ELECTION.y, RESULT_PREVIOUS_CANDIDATURE= RESULT.y, PREVIOUS_PARTY=PARTY_ACRONYM.y,
+                                                           PREVIOUS_PARTY_N=PARTY_NUMBER.y, Total_votes_previous =Total.y, SHARE_VOTES_PREVIOUS_CANDID=share_vote_08,
+                                                           MARGIN_VICTORY_PREVIOUS_CANDID=margin_victory_08) # rename
+candidates_2008_2012_mun<-rbind(candidates_2008_mun, candidates_2012_mun) # merge 2012 and 2008 incumbents trying re-election
+
+# merge 2008 & 2012 electoral performance and corruption dataset at municipal level
+drew_municipalities_elect_performances = subset(drew_municipalities, select = -c(exppop,tx_analf18m, gini, treatment,
+                                                                                 lpop,lrenda_pc, shurb, T_SUPER25M, n_nbr, n_nbraudited,
+                                                                                 party_id,puf_treatment)) # remove innocuous variables from Avis & Ferraz.  # "treatment" originally contained in the dataset from Avis, E., Ferraz, C., & Finan, F. (2018) and here refers to municipalities audited twice or once. Moreover, controls variables used were from 2000 Census 
+drew_municipalities_elect_performances<-na.omit(drew_municipalities_elect_performances) # some municipalities audited did not have their audit reports coded by Avis and Ferraz, only 982 municipalities did.
+drew_municipalities_elect_performances$threshold<-ifelse(drew_municipalities_elect_performances$sorteio<34,2008,2012) # create thresholds to compare RD, DD
+# merge corruption info with electoral performance
+drew_municipalities_elect_performances<-merge(x=drew_municipalities_elect_performances,y=candidates_2008_2012_mun,by.x=c("NAME_MUNICIPALITY", "UF","threshold"),
+                                              by.y =c("NAME_MUNICIPALITY.x", "ACRONYM_STATE","YEAR_ELECTION_CANDIDATURE") , all= F) 
+drew_municipalities_elect_performances<-drew_municipalities_elect_performances[!duplicated(drew_municipalities_elect_performances$unique_id),] # remove municipalities audited twice
 
 
 # ---------------------------------------------------------------------------------------------------------------------------#
-################################################### ANALYSIS #################################################################
+################################################### DATA ANALYSIS ############################################################
 # ---------------------------------------------------------------------------------------------------------------------------#
 
 # Summary statistics ####
 sum(table(drew_municipalities$UF)) # between 2006-2013, 1020 municipalities were audited
-unique(drew_municipalities$NAME_MUNICIPALITY) # with 962 unique municipalities (then 328 municipalities were audited twice)
-first_term_drew_mun<-as.data.frame(unique(votes_per_precinct$NAME_MUNICIPALITY)) # 293 had mayors who ran for re-election.
+unique(drew_municipalities$NAME_MUNICIPALITY) # with 967 unique municipalities (then 53 municipalities were audited twice)
+unique(drew_municipalities_elect_performances$unique_id) # 385 had mayors who ran for re-election.
 
 # Figure 1 ####
-# add dates of the lotteries according to https://www.gov.br/cgu/pt-br/assuntos/auditoria-e-fiscalizacao/programa-de-fiscalizacao-em-entes-federativos/edicoes-anteriores/municipios?b_start:int=0
-drew_municipalities<-drew_municipalities %>% mutate(lottery_date =
-                     case_when(sorteio == 22 ~ as.Date("2006/07/19"), 
-                               sorteio == 23 ~ as.Date("2007/05/09"),
-                               sorteio == 24 ~ as.Date("2007/07/24"),
-                               sorteio == 25 ~ as.Date("2007/10/09"),
-                               sorteio == 26 ~ as.Date("2008/04/30"),
-                               sorteio == 27 ~ as.Date("2008/10/29"),
-                               sorteio == 28 ~ as.Date("2009/05/12"),
-                               sorteio == 29 ~ as.Date("2009/08/17"),
-                               sorteio == 30 ~ as.Date("2009/10/05"),
-                               sorteio == 31 ~ as.Date("2010/03/01"),
-                               sorteio == 32 ~ as.Date("2010/05/10"),
-                               sorteio == 33 ~ as.Date("2010/07/26"),
-                               sorteio == 34 ~ as.Date("2011/08/15"),
-                               sorteio == 35 ~ as.Date("2011/10/03"),
-                               sorteio == 36 ~ as.Date("2012/07/23"),
-                               sorteio == 37 ~ as.Date("2012/10/08"),
-                               sorteio == 38 ~ as.Date("2013/03/04")))  %>%
-                               mutate(year = year(lottery_date))                                      
 plot(factor(drew_municipalities$year),ylim = c(0, 200), yaxp=c(0, 180,6), 
      xlab = "Year", ylab = "N°municipalities audited", border = "black", col="lightgrey") # number of audited municipalities per year
 abline(h=c(60,120,180),  lty = 3)
 
 # Figure 2 ####
-drew_municipalities_first_terms<- drew_municipalities %>% 
-  filter(NAME_MUNICIPALITY %in% first_term_drew_mun$`unique(votes_per_precinct$NAME_MUNICIPALITY)`) # keeping municipalities audited twice 
-drew_municipalities_first_terms<- drew_municipalities_first_terms %>%
-  distinct(NAME_MUNICIPALITY, drew_municipalities_first_terms$year != 2013, .keep_all = T) %>% select(1:26) # but only those in 2013
-# The 2008 elections happened on the 5th October (1st round) and 26th October (2nd round)
-# The 2012 elections happened on the 7th October (1st round) and 28th October (2nd round)
-
-drew_municipalities_first_terms %>%
+drew_municipalities_elect_performances %>%
 #  mutate(treat_condition = if_else(radio_am==1, 
 #                                   "Radio municipality (treatment)", 
 #                                   "No radio (control)")) %>% 
@@ -440,7 +629,7 @@ drew_municipalities_first_terms %>%
 #ggplot(drew_municipalities_first_terms, aes(x = as.factor(lottery_date), y = lfalha_total)) + geom_boxplot()+ theme_minimal()  
 
 # Figure 3 ####
-drew_municipalities_first_terms %>%
+drew_municipalities_elect_performances %>%
    mutate(treat_condition = if_else(radio_am==1,
                                     "Radio in the municipality",
                                     "No local radio present")) %>%
@@ -458,51 +647,31 @@ drew_municipalities_first_terms %>%
   theme(legend.position = c(0.14, 0.88))
 
 # Figure 4 ####
-share_votes_by_corruption_levels<-subset(votes_per_precinct,sorteio<32)
-library(dplyr)
-share_votes_by_corruption_levels<-share_votes_by_corruption_levels %>%
-  group_by(NAME_MUNICIPALITY, UF) %>%
-  summarize(relection_rate = ((sum(Elected)/nrow(share_votes_by_corruption_levels))*nrow(share_votes_by_corruption_levels))/100, # counts the n°of sections won by the candidate divided by all the sections and it multiples the latter calculation by the number of section (this penalizes municipalities with few sections)
-            mean_lfalha_total= mean(lfalha_total),
-            mean_lmismanagement= mean(lmismanagement),
-            mean_illiterate= mean(share_illit),
-            mean_semi_illit= mean(share_semi_illit),
-            draw=mean(sorteio),
-            share_vote_mean = mean(Share)) 
-share_votes_by_corruption_levels$relection_rate<-
-  (share_votes_by_corruption_levels$relection_rate-min(share_votes_by_corruption_levels$relection_rate))/ # normalize 0-1 re-election rates
-   (max(share_votes_by_corruption_levels$relection_rate)-min(share_votes_by_corruption_levels$relection_rate)) 
-share_votes_by_corruption_levels$treat<-ifelse(share_votes_by_corruption_levels$draw<27,"pre-elections","post-elections")
+drew_municipalities_elect_performances$treat<-ifelse(drew_municipalities_elect_performances$sorteio<27,"pre-elections",
+                                          ifelse(drew_municipalities_elect_performances$sorteio>33 & 
+                                                   drew_municipalities_elect_performances$sorteio<37,"pre-elections","post-elections")) # create a new "treatment" to consider municipalities audited before and after the respective elections of 2008 and 2012
 # Plot:
-plot_share_votes_by_corruption_levels = share_votes_by_corruption_levels %>% 
-  mutate(ds = as.factor(treat)) %>% # Temporary changes the type of ds from integer to factor so ggplot understands
-  ggplot(aes(x = mean_lfalha_total, y = relection_rate, group = ds, col = ds)) +
-  # stat_summary(fun = "mean") +
-  # stat_summary(geom = "line") + # Displays the mean as a line
-  # stat_summary(geom = "point") + # Displays the mean as a point
-  labs(col = "Audited:") + # Changes the name from "ds" to "Group" in the legend
-  theme_classic() + # Changes the theme
-  geom_smooth(span = 0.4, aes(fill = treat),se=F) +
-  labs(x = "Mean acts of corruption (logarithm scale)", y = "Re-election rates, (mean)") +
-  guides(fill="none")+
-  scale_y_continuous(labels = scales::percent)+
-  theme(legend.position = c(0.24, 0.88)) # Change aspect ratio of the plot. Not necessary, but some prefer it.
-plot_share_votes_by_corruption_levels
+plot_share_votes_by_corruption_levels<-subset(drew_municipalities_elect_performances, SHARE_VOTES_CANDIDATURE<1 & year<2011) 
+# !!! 15 candidates with 100% shares discarded
+plot_share_votes_by_corruption_levels %>%
+  # Add a new column called 'bin': cut the initial corruption in bins
+  mutate( bin=cut_width(exp(lfalha_total), width=30, boundary=0) ) %>%
+  ggplot( aes(x=bin, y=SHARE_VOTES_CANDIDATURE, fill=treat)) +
+  geom_boxplot() +
+  theme_minimal()+
+  theme(text = element_text(size=10),axis.text.x = element_text(angle=45, hjust=1), legend.position = "none") +
+  xlab("Acts of corruption")+
+  ylab("Share of votes 2008 elections")+
+  theme(legend.title=element_blank())+
+  facet_wrap(~treat)
 
-
-# "treatment" originally contained in the dataset from Avis, E., Ferraz, C., & Finan, F. (2018) and here refers to municipalities audited twice or once
-# create a new "treatment" to consider municipalities audited before and after the respective elections of 2008 and 2012
-
-
-# map of municipalities BR - https://github.com/ipeaGIT/geobr ####
-library(geobr)
-library(ggplot2)
-library(RColorBrewer)
-library(sf)
-# utils::remove.packages('geobr')
+# Figure 6 ####
+# map of municipalities BR - https://github.com/ipeaGIT/geobr 
 # Read all municipalities in the country at a given year
 mun <- read_municipality(code_muni="all", year=2010)
-
+# mun$name_muni_capital<-toupper(mun$name_muni)
+# mun %>% 
+#   filter(name_muni_capital %in% unique(votes_per_precinct$NAME_MUNICIPALITY))
 # plot only the sections 
 ggplot() + 
   geom_sf(data=mun, fill = NA) + scale_fill_gradientn(colours= brewer.pal(2, "RdYlGn"))+
@@ -511,7 +680,6 @@ ggplot() +
   theme(panel.grid.major = element_blank(), panel.background = element_blank(), panel.grid.minor = element_blank())+
   labs(col="Reelection")+
   ggtitle("Brazil's 2008 and 2012 voting precincts where mayors were re-elected or not")
-
 # plot municipalities together with voting sections
 ggplot() + 
   geom_sf(data=mun, fill = NA) + scale_fill_gradientn(colours= brewer.pal(9, "RdYlGn"))+
@@ -520,6 +688,369 @@ ggplot() +
   theme(panel.grid.major = element_blank(), panel.background = element_blank(), panel.grid.minor = element_blank())+
   labs(col="States")+
   ggtitle("Brazil's voting precincts locations in 2010")
+
+# Table 2 ####
+# compare characteristics of municipalities audited before and after the elections
+# balance_test<- votes_per_precinct %>%
+#   dplyr::group_by(NAME_MUNICIPALITY, UF, YEAR_ELECTION.x, NAME_CANDIDATE.x, RESULT.x, PARTY_ACRONYM.x) %>%
+#   dplyr::summarize(party= mean(PARTY_NUMBER.x)) %>% distinct(NAME_MUNICIPALITY, .keep_all = TRUE)
+# balance_test<-balance_test[!duplicated(balance_test$NAME_MUNICIPALITY), ]                   
+
+
+balance_test<- merge(drew_municipalities_elect_performances, controls, by.x = c("NAME_MUNICIPALITY","UF"), by.y=c("NAME_MUNICIPALITY","state"), all.x = T, all.y = F) 
+balance_test<-subset(balance_test, select = -c(Município.y))
+balance_test[,-c(1:48)]<-sapply(balance_test[,-c(1:48)], function(x) as.numeric(gsub(",",".",x))) # replace comma separators by dot
+balance_test$`Political party`<-factor(balance_test$PARTY_ACRONYM.x)
+# labels
+balnce_test_labels <- data.frame(var = c('treat','RESULT_CANDIDATURE','radio_am','Valor.Superios completo','Valor.Sem instrução e fundamental incompleto',
+                               'Valor.Empregado','Valor.Rural - área rural (exceto aglomerado)','Valor.Urbana - cidade ou vila - área urbanizada',
+                               'PIB_per_capita','Taxa_de_analfabetismo','X._população_com_renda_._1.2_SM', 'Taxa_de_desemprego_16a_e.'),
+                       labels = c('Municipalities audited','Elected/Not','Radio (AM) municipality','% with college','% without elementary school',
+                                  '% employed','% municipality rural', '% urban area', 'GDP capita BRL','Illiteracy rate',
+                                  '% people earning less 0.5 of min wage','unemployed rate'))
+balance_test %>% select(-c(threshold, UF, sorteio, uf_id, no_os, lfalha_total, lnirregular, lmismanagement, lno_os,
+                        lottery_date, year, unique_id, NAME_CANDIDATE, PARTY_NUMBER.x, PARTY_ACRONYM.x,
+                        YEAR_PREVIOUS_CANDIDATURE, RESULT_PREVIOUS_CANDIDATURE, PREVIOUS_PARTY_N, PREVIOUS_PARTY,
+                        Total_votes_previous, SHARE_VOTES_PREVIOUS_CANDID, MARGIN_VICTORY_PREVIOUS_CANDID, `Município (Código)`, `Unidade de Medida`,Município.x,
+                        Ano, X._população_com_renda_._1.4_SM,`Valor.Rural - aglomerado - povoado`, `Valor.Trabalhador na produção para o próprio consumo`,
+                        Valor.Empregador,`Valor.Empregado - com carteira de trabalho assinada`, `Valor.Empregado - outro sem carteira de trabalho assinada`,
+                        `Valor.Conta própria`, `Valor.Fundamental completo e médio incompleto`, `Valor.Médio completo e superior incompleto`)) %>%
+                sumtable(group = 'treat', group.test= T, labels = balnce_test_labels, out = 'latex') # https://cran.r-project.org/web/packages/vtable/vtable.pdf
+
+
+# Exploratory analysis ####
+# rename control variables
+balance_test<-rename(balance_test, c('Valor.Superior completo'='with_college', 
+                                     'Valor.Sem instrução e fundamental incompleto'='no_elementary',
+                                     'Valor.Empregado'='perctg_employed','Valor.Rural - área rural (exceto aglomerado)'='perctg_rural',
+                                     'Valor.Urbana - cidade ou vila - área urbanizada'='perctg_urban',
+                                     'PIB_per_capita'='gdp_capita','Taxa_de_analfabetismo'='illiteracy_rate',
+                                     'X._população_com_renda_._1.2_SM'='perctg_earning_half_mwage', 
+                                     'Taxa_de_desemprego_16a_e.'='unemploym_rate',"Valor.Rural - aglomerado - povoado"="perctg_rural",
+                                     "X._população_com_renda_._1.4_SM"='perctg_earning_quarter_mwage',
+                                     "Valor.Trabalhador na produção para o próprio consumo"="self_employed",
+                                     "Valor.Empregador"="employer","Valor.Empregado - outro sem carteira de trabalho assinada"=
+                                       "perctg_informal_workers","Valor.Empregado - com carteira de trabalho assinada"="perctg_formal_workers",
+                                     "Valor.Conta própria"="independent","Valor.Fundamental completo e médio incompleto"="elementary",
+                                     "Valor.Médio completo e superior incompleto"="high_school")) 
+# create variables "Change in vote share" and "Change in margins" related to previous elections. 
+balance_test$delta_vote_share<-(balance_test$SHARE_VOTES_CANDIDATURE- balance_test$SHARE_VOTES_PREVIOUS_CANDID)
+balance_test$delta_margin_victory<-(balance_test$MARGIN_VICTORY_CANDIDATURE- balance_test$MARGIN_VICTORY_PREVIOUS_CANDID)
+# Create dummy indicated elected or not candidates 
+balance_test$elected<-ifelse(balance_test$RESULT_CANDIDATURE=="ELEITO",1,0) # create dummy
+# Restrict sample
+balance_test_restricted<-subset(balance_test, SHARE_VOTES_CANDIDATURE != 1) # remove observations with vote share = 100% these are cases where one of the candidates had its candidature/election denied due to irregularities
+balance_test_restricted_2008<-subset(balance_test,year<2011) # only consider the 2008 elections
+
+# Summary variables
+print(summary(balance_test)) #radio and tc are dummies, share_votes contains 100%, margin victory contain weird numbers (review), with_college (max 15%), employer (21 NAs), pctg_rural (190NAs) 
+# veriy outliers
+data_long <- melt(balance_test)
+ggplot(data_long, aes(x = variable, y = value)) +           
+  geom_boxplot()+
+  facet_wrap( ~ variable, scales="free") 
+# lfalha_total,lnirregular and lmismanagemetn few outliers but well distributed, 
+# total votes skewed, share votes has outliers but well distributed, margin victory skewed, 
+# with college, high school, independent, emplyer, self_employed, rural, gdp_capita, unemployment rate are skewed,  
+
+# dplyr::mutate_each(balance_test, funs(log),
+#                    log_tot_votes = Total_votes,
+#                    log_share_votes = SHARE_VOTES_CANDIDATURE,
+#                    log_margin_votes = MARGIN_VICTORY_CANDIDATURE,
+#                    log_college = with_college,
+#                    log_high_school=high_school,
+#                    log_indpt=independent,
+#                    log_employer=employer,
+#                    log_self_emplyed=self_employed,
+#                    log_rural=perctg_rural,
+#                    log_unemploym=unemploym_rate)
+# transform
+balance_test$ln_gdp_capita<-log(balance_test$gdp_capita)
+balance_test$log_tot_votes<-log(balance_test$Total_votes)
+balance_test$log_share_votes<-log(balance_test$SHARE_VOTES_CANDIDATURE)
+balance_test$log_margin_votes<-log(balance_test$MARGIN_VICTORY_CANDIDATURE)
+balance_test$log_college<-log(balance_test$with_college)
+balance_test$log_high_school<-log(balance_test$high_school)
+balance_test$log_indpt<-log(balance_test$independent)
+balance_test$log_employer<-log(balance_test$employer)
+balance_test$log_self_emplyed<-log(balance_test$self_employed)
+balance_test$log_rural<-log(balance_test$perctg_rural)
+balance_test$log_unemploym<-log(balance_test$unemploym_rate)
+balance_test$log_delta_vote_share<-log(balance_test$delta_vote_share)
+
+data_long <- melt(balance_test)
+ggplot(data_long, aes(x = variable, y = value)) +           
+  geom_boxplot()+
+  facet_wrap( ~ variable, scales="free") # share_votes still quite skewed as well as vote_shares
+# correlations to keep in mind
+require(ellipse)
+colnames(balance_test) # verify columns used below
+plotcorr(cor(balance_test[, c(8,9,10,12,21,22,23,36,39,43,48,50,55,56,57,58)],use="complete.obs")) # pearson corr
+plotcorr(cor(balance_test[, c(8,9,10,12,21,22,23,55,59,60,65,63,36,39,43,48,50,55,56,57,58)], method = "spearman", use="complete.obs"))
+
+# VIFs, Step forward and Global method to choose covariates 
+# VIF(balance_test[, c(12,13,55,65,63,59,50,48,39)], balance_test[, 56])# exclude no elementary with log_vote_shares, don't include log_high_school 
+# ProcStep(CoursEval[, c(12,13,59,37,38,39,41,62,43,63,48,50,52,51,65,55)], CoursEval[, 1], method="forward")
+
+# Table 3 ####
+# Model without control - share votes
+share_votes_no_controls<-lm(SHARE_VOTES_CANDIDATURE ~ treat, data = balance_test)
+share_votes_no_controls_rob<-lm_robust(SHARE_VOTES_CANDIDATURE ~ treat, data = balance_test, se_type = "HC1")
+log_share_votes_no_controls<-lm(log_share_votes ~ treat, data = balance_test) # boxplot recommends the share instead
+log_share_votes_no_controls_rob<-lm_robust(log_share_votes ~ treat, data = balance_test, se_type = "HC1")
+# However share of votes is truncated between 0 and 1
+logit_share_votes_no_controls <- glm(SHARE_VOTES_CANDIDATURE ~ treat,
+                                  family = binomial(link = logit), data = balance_test) #Logit model
+1 - logit_share_votes_no_controls$deviance/logit_share_votes_no_controls$null.deviance # pseudo-R squared values 0.002645236
+summary(logit_share_votes_no_controls) # you can trust in the sign of the coeff but not on its magnitude
+summary(margins(logit_share_votes_no_controls)) # -2% in vote shares (avg mg effect)
+logit_share_votes_no_controls_margins<-margins(logit_share_votes_no_controls)
+# Model without control - log total votes
+log_tot_votes_no_controls_rob<-lm_robust(log_tot_votes ~ treat, data = balance_test, se_type = "HC1")
+# Model without control - delta total votes
+delta_share_votes_no_controls_rob<-lm_robust(delta_vote_share ~ treat, data = balance_test, se_type = "HC1")
+# Model without control - dummy elected
+logit_prob_elect_no_controls <- glm(elected ~ treat,
+                                     family = binomial(link = logit), data = balance_test) #Logit model
+1 - logit_share_votes_no_controls$deviance/logit_share_votes_no_controls$null.deviance 
+summary(logit_prob_elect_no_controls) # you can trust in the sign of the coeff but not on its magnitude
+summary(margins(logit_prob_elect_no_controls)) # -4% in vote shares (avg mg effect)
+logit_prob_elect_no_controls_margins<-margins(logit_prob_elect_no_controls)
+# see results
+export_summs(logit_share_votes_no_controls_margins, #share_votes_no_controls_rob,
+             delta_share_votes_no_controls_rob, logit_prob_elect_no_controls,
+             to.file="pdf",  file.name ="Table 3", robust = TRUE,
+             scale = F, model.names = c("Share votes (SV),logit AME","Change share votes","P(re-election), AME"), digits=4,
+             error_format = "[{conf.low}, {conf.high}]") # the intercepts are signficant, see Figure 2 why
+
+# Table 4 controls similar to Ferraz & Finan 2008 ####
+# Model with control (similar to Ferraz 2008) - share votes
+share_votes_controls_from_ferraz<-lm(SHARE_VOTES_CANDIDATURE ~ treat + perctg_urban+illiteracy_rate+
+                           ln_gdp_capita + factor(UF) , data = balance_test)
+share_votes_controls_from_ferraz_rob<-lm_robust(SHARE_VOTES_CANDIDATURE ~ treat + perctg_urban+illiteracy_rate+
+                                       ln_gdp_capita + factor(UF) , data = balance_test, se_type = "HC1")
+logit_share_votes_controls_from_ferraz <- glm(SHARE_VOTES_CANDIDATURE ~ treat + perctg_urban+illiteracy_rate+
+                                                ln_gdp_capita , # + factor(UF)
+                                                family = binomial(link = logit), data = balance_test) #Logit model
+1 - logit_share_votes_controls_from_ferraz$deviance/logit_share_votes_controls_from_ferraz$null.deviance # pseudo-R squared values 0.002645236
+summary(logit_share_votes_controls_from_ferraz) # you can trust in the sign of the coeff but not on its magnitude
+summary(margins(logit_share_votes_controls_from_ferraz)) # -1.8% in vote shares (avg mg effect)
+logit_share_votes_controls_from_ferraz_margins<-margins(logit_share_votes_controls_from_ferraz) # margins
+log_share_votes_controls_from_ferraz_rob<-lm_robust(log_share_votes ~ treat + perctg_urban+illiteracy_rate+
+                                                  ln_gdp_capita + factor(UF) , data = balance_test, se_type = "HC1")
+# Model with control (similar to Ferraz 2008) - log total votes
+log_tot_votes_controls_from_ferraz_rob<-lm_robust(log_tot_votes ~ treat + perctg_urban+illiteracy_rate+
+                                                  ln_gdp_capita , data = balance_test, se_type = "HC1") # + factor(UF)
+# Model with control - delta share votes
+delta_share_votes_controls_from_ferraz_rob<-lm_robust(delta_vote_share ~ treat+ perctg_urban+illiteracy_rate+
+                                                      ln_gdp_capita , data = balance_test, se_type = "HC1") # + factor(UF)
+# Model with control - dummy elected
+logit_prob_elect_controls_from_ferraz <- glm(elected ~ treat+ perctg_urban+illiteracy_rate+
+                                               ln_gdp_capita , # + factor(UF)
+                                               family = binomial(link = logit), data = balance_test) #Logit model
+1 - logit_prob_elect_controls_from_ferraz$deviance/logit_prob_elect_controls_from_ferraz$null.deviance 
+summary(logit_prob_elect_controls_from_ferraz) # you can trust in the sign of the coeff but not on its magnitude
+summary(margins(logit_prob_elect_controls_from_ferraz)) # -4% in chances of re-election (avg mg effect)
+logit_prob_elect_controls_from_ferraz_margins<-margins(logit_prob_elect_controls_from_ferraz)
+# see results
+export_summs(logit_share_votes_controls_from_ferraz, #share_votes_no_controls_rob,
+             delta_share_votes_controls_from_ferraz_rob, logit_prob_elect_controls_from_ferraz,
+             to.file="pdf",  file.name ="Table 4", robust = TRUE,
+             scale = F, model.names = c("Share votes,logit Avg Marg Effect, AME","Change share votes","P(re-election), AME"), digits=4,
+             error_format = "[{conf.low}, {conf.high}]") # the intercepts are signficant, see Figure 2 why
+
+# Table 4.1 controls selected via vif ####
+# Model with controls VIFs - share votes
+eval_share_votes = lm(SHARE_VOTES_CANDIDATURE ~ treat +log_college + high_school+ elementary+
+                        no_elementary+ perctg_employed+ log_employer+ perctg_informal_workers+
+                        log_self_emplyed+ perctg_urban+ illiteracy_rate +ln_gdp_capita +
+                        perctg_earning_quarter_mwage+ log_unemploym, data = balance_test)
+GlobalCrit(eval_share_votes) # AIC BIC indicates GH, GHN, GKM; G.log_employer, H:perctg_informal K:illiteracy, M:perctg_earning_q, N:log_unemploy
+share_votes_controls_vif_rob<-lm_robust(SHARE_VOTES_CANDIDATURE ~ treat+log_employer+ perctg_informal_workers+ log_unemploym ,
+                         data = balance_test, se_type = "HC1") #  + factor(UF)
+logit_share_votes_controls_vif<-glm(SHARE_VOTES_CANDIDATURE ~ treat+log_employer+ perctg_informal_workers+ log_unemploym,
+                                    family = binomial(link = logit), data = balance_test) # + factor(UF)
+1 - logit_share_votes_controls_vif$deviance/logit_share_votes_controls_vif$null.deviance # pseudo-R squared values 0.002645236
+summary(logit_share_votes_controls_vif) # you can trust in the sign of the coeff but not on its magnitude
+summary(margins(logit_share_votes_controls_vif)) # -1.89% in vote shares (avg mg effect)
+logit_share_votes_controls_vif<-margins(logit_share_votes_controls_vif) # margins
+# Model with control VIFs - log total votes
+log_tot_votes_controls_vif_rob<-lm_robust(log_tot_votes ~ treat + log_employer+ perctg_informal_workers+ log_unemploym
+                                          , data = balance_test, se_type = "HC1") # + factor(UF)
+# Model with control - delta share votes
+delta_share_votes_controls_vif_rob<-lm_robust(delta_vote_share ~ treat+ log_employer+ perctg_informal_workers+ log_unemploym 
+                                              , data = balance_test, se_type = "HC1") # + factor(UF)
+# Model with control - dummy elected
+logit_prob_elect_controls_vif<- glm(elected ~ treat+ log_employer+ perctg_informal_workers+ log_unemploym, # + factor(UF)
+                                             family = binomial(link = logit), data = balance_test) #Logit model
+1 - logit_prob_elect_controls_vif$deviance/logit_prob_elect_controls_vif$null.deviance 
+summary(logit_prob_elect_controls_vif) # you can trust in the sign of the coeff but not on its magnitude
+summary(margins(logit_prob_elect_controls_vif)) # -4% in chances of re-election (avg mg effect)
+logit_prob_elect_controls_vif_margins<-margins(logit_prob_elect_controls_vif)
+# see results
+export_summs(logit_share_votes_controls_vif, #share_votes_no_controls_rob,
+             delta_share_votes_controls_vif_rob, logit_prob_elect_controls_vif,
+             to.file="pdf",  file.name ="Table 4.1", robust = TRUE,
+             scale = F, model.names = c("Share votes,logit Avg Marg Effect, AME","Change share votes","P(re-election), AME"), digits=4,
+             error_format = "[{conf.low}, {conf.high}]") # the intercepts are signficant, see Figure 2 why
+
+# Table 5 - prob election with interacted audited*corruption ####
+# Linear probab model - no controls
+audit_corrupt_prob_elect_no_controls_rob<-lm_robust(elected ~ treat*lfalha_total, data = balance_test, se_type = "HC1")
+summary(audit_corrupt_prob_elect_no_controls_rob, digits=3)
+# Linear probab model - with controls
+audit_corrupt_prob_elect_controls_rob<-lm_robust(elected ~ treat*lfalha_total + perctg_urban+illiteracy_rate+
+                                                   ln_gdp_capita, data = balance_test, se_type = "HC1")
+summary(audit_corrupt_prob_elect_controls_rob, digits=3)
+
+# Logitt models - no controls
+# !!! try out robust later - require(robustbase) glmrob
+logit_audit_corrupt_prob_elect_no_controls <- glm(elected ~treat*lfalha_total, 
+                                                  family = binomial(link = logit), data = balance_test) #Logit model
+1 - logit_audit_corrupt_prob_elect_no_controls$deviance/logit_audit_corrupt_prob_elect_no_controls$null.deviance # pseudo R2
+summary(logit_audit_corrupt_prob_elect_no_controls)
+# AME
+logit_audit_corrupt_prob_elect_no_controls_AME<-(logitmfx(elected ~ treat +lfalha_total + treat*lfalha_total, data=balance_test,
+                                                          robust = F, # calculate robust SE
+                                                          atmean = FALSE)) # average partial effect -"atmean" = "FALSE" calculates AMEs instead of MEMs
+# margins
+logit_audit_corrupt_prob_elect_no_controls_margins<-summary(margins(logit_audit_corrupt_prob_elect_no_controls))
+# margins at levels
+summary(margins(logit_audit_corrupt_prob_elect_no_controls, at=list(lfalha_total=c(1:6)),variables = "lfalha_total")) # -4% in chances of re-election (avg mg effect)
+# margins at quantiles
+logit_audit_corrupt_prob_elect_no_controls_1q <- margins(logit_audit_corrupt_prob_elect_no_controls,
+                    at = list(lfalha_total = quantile(balance_test$lfalha_total, 0.25)), # at the first quantile 
+                    type = "response")
+logit_audit_corrupt_prob_elect_no_controls_2q <- margins(logit_audit_corrupt_prob_elect_no_controls,
+                                                         at = list(lfalha_total = quantile(balance_test$lfalha_total, 0.50)), # at the first quantile 
+                                                         type = "response")
+logit_audit_corrupt_prob_elect_no_controls_3q <- margins(logit_audit_corrupt_prob_elect_no_controls,
+                                                         at = list(lfalha_total = quantile(balance_test$lfalha_total, 0.75)), # at the first quantile 
+                                                         type = "response")
+export_summs(logit_audit_corrupt_prob_elect_no_controls_1q, 
+             logit_audit_corrupt_prob_elect_no_controls_2q, 
+             logit_audit_corrupt_prob_elect_no_controls_3q,
+             to.file="pdf",  file.name ="Table 5.1", robust = TRUE,
+             scale = F, digits=6, model.names = c("No controls 1Q", "No controls 2Q", "No controls 3Q"), digits=4,
+             error_format = "[{conf.low}, {conf.high}]")
+            
+# Logit & Probit models - with controls
+logit_audit_corrupt_prob_elect_controls <- glm(elected ~ treat*lfalha_total + perctg_urban+illiteracy_rate+
+                                                 ln_gdp_capita, family = binomial(link = logit), data = balance_test) #Logit model
+1 - logit_audit_corrupt_prob_elect_controls$deviance/logit_audit_corrupt_prob_elect_controls$null.deviance # pseudo R2
+summary(logit_audit_corrupt_prob_elect_controls)
+# AME
+logit_audit_corrupt_prob_elect_controls_margins_AME<-(logitmfx(elected ~treat*lfalha_total + perctg_urban+illiteracy_rate+
+                                                                 ln_gdp_capita, data=balance_test,
+                                                          robust = F, # calculate robust SE
+                                                          atmean = FALSE)) # average partial effect -"atmean" = "FALSE" calculates AMEs instead of MEMs
+logit_audit_corrupt_prob_elect_controls_margins_AME
+# margins
+summary(margins(logit_audit_corrupt_prob_elect_controls)) 
+# margins at levels
+summary(margins(logit_audit_corrupt_prob_elect_controls, at=list(lfalha_total=c(1:6)),variables = "lfalha_total"))
+# margins at quantiles
+logit_audit_corrupt_prob_elect_controls_1q <- margins(logit_audit_corrupt_prob_elect_controls,
+                                                         at = list(lfalha_total = quantile(balance_test$lfalha_total, 0.25)), # at the first quantile 
+                                                         type = "response")
+logit_audit_corrupt_prob_elect_controls_2q <- margins(logit_audit_corrupt_prob_elect_controls,
+                                                         at = list(lfalha_total = quantile(balance_test$lfalha_total, 0.50)), # at the first quantile 
+                                                         type = "response")
+logit_audit_corrupt_prob_elect_controls_3q <- margins(logit_audit_corrupt_prob_elect_controls,
+                                                         at = list(lfalha_total = quantile(balance_test$lfalha_total, 0.75)), # at the first quantile 
+                                                         type = "response")
+export_summs(logit_audit_corrupt_prob_elect_controls_1q, 
+             logit_audit_corrupt_prob_elect_controls_2q, 
+             logit_audit_corrupt_prob_elect_controls_3q,
+             to.file="pdf",  file.name ="Table 5.2", robust = TRUE,
+             scale = F, digits=6, model.names = c("Controls 1Q", "Controls 2Q", "Controls 3Q"))
+
+# Logit model with control and quadratic term
+quadratic_logit_audit_corrupt_prob_elect_controls <- glm(elected ~ treat:lfalha_total + treat:I(lfalha_total^2)+ 
+                                                         perctg_urban+illiteracy_rate+ ln_gdp_capita, 
+                                                         family = binomial(link = logit), data = balance_test) #Logit model
+1 - quadratic_logit_audit_corrupt_prob_elect_controls$deviance/quadratic_logit_audit_corrupt_prob_elect_controls$null.deviance # pseudo R2
+summary(quadratic_logit_audit_corrupt_prob_elect_controls)
+# AME
+quadratic_logit_audit_corrupt_prob_elect_controls_AME<-(logitmfx(elected ~ treat:lfalha_total + treat:I(lfalha_total^2)+ 
+                                                                  perctg_urban+illiteracy_rate+ ln_gdp_capita, 
+                                                                  data = balance_test,
+                                                               robust = F, # calculate robust SE
+                                                               atmean = FALSE)) # average partial effect -"atmean" = "FALSE" calculates AMEs instead of MEMs
+quadratic_logit_audit_corrupt_prob_elect_controls_AME
+# margins
+summary(margins(quadratic_logit_audit_corrupt_prob_elect_controls)) 
+quadratic_logit_audit_corrupt_prob_elect_controls_margins<-margins(quadratic_logit_audit_corrupt_prob_elect_controls)
+# margins at levels
+summary(margins(quadratic_logit_audit_corrupt_prob_elect_controls, at=list(lfalha_total=c(1:6)),variables = "lfalha_total")) # -4% in chances of re-election (avg mg effect)
+# margins at quantiles
+quadratic_logit_audit_corrupt_prob_elect_controls_1q <- margins(quadratic_logit_audit_corrupt_prob_elect_controls,
+                                                         at = list(lfalha_total = quantile(balance_test$lfalha_total, 0.25)), # at the first quantile 
+                                                         type = "response")
+quadratic_logit_audit_corrupt_prob_elect_controls_2q <- margins(quadratic_logit_audit_corrupt_prob_elect_controls,
+                                                         at = list(lfalha_total = quantile(balance_test$lfalha_total, 0.50)), # at the first quantile 
+                                                         type = "response")
+quadratic_logit_audit_corrupt_prob_elect_controls_3q <- margins(quadratic_logit_audit_corrupt_prob_elect_controls,
+                                                         at = list(lfalha_total = quantile(balance_test$lfalha_total, 0.75)), # at the first quantile 
+                                                         type = "response")
+export_summs(quadratic_logit_audit_corrupt_prob_elect_controls_1q, 
+             quadratic_logit_audit_corrupt_prob_elect_controls_2q, 
+             quadratic_logit_audit_corrupt_prob_elect_controls_3q,
+             to.file="pdf",  file.name ="Table 5.3", robust = TRUE,
+             scale = F, digits=6, model.names = c("Quadratic 1Q", "Quadratic 2Q", "Quadratic 3Q"))
+# RESULTS
+# MODELS 
+stargazer(logit_audit_corrupt_prob_elect_no_controls, 
+          logit_audit_corrupt_prob_elect_controls, 
+          quadratic_logit_audit_corrupt_prob_elect_controls,
+          title="Coefficients logit - interaction term corruption levels and timing audit (pre and post elections)",
+          column.labels = c("No control", "Control","Quadratic"),
+          covariate.labels = c("constant", "pre elections", "Corruption (log)",
+                               "urban", "illiterate", "Gdp capita (log)",
+                               "post*corruption","pre*corruption","post*corruption^2",
+                               "pre*corrruption^2"),
+          dep.var.labels   = "Prob (re-election)",
+          type="latex",
+          keep.stat = c("aic","chi2","ll","rsq","ser"),
+          ci=F,
+          intercept.bottom = FALSE,
+          notes = "Dep variable is a dummy indicating if incumbent was re-elected")
+
+# Table 6: prob election with interacted audited*corruption*radio ####
+# without controls
+logit_radio_audit_corrupt_prob_elect_no_controls <- glm(elected ~treat*lfalha_total*radio_am, 
+                                                  family = binomial(link = logit), data = balance_test) #Logit model
+1 - logit_radio_audit_corrupt_prob_elect_no_controls$deviance/logit_radio_audit_corrupt_prob_elect_no_controls$null.deviance # pseudo R2
+summary(logit_radio_audit_corrupt_prob_elect_no_controls)
+# AME
+logit_radio_audit_corrupt_prob_elect_no_controls_AME<-(logitmfx(elected ~ treat +lfalha_total + radio_am+ treat*lfalha_total*radio_am, data=balance_test,
+                                                          robust = F, # calculate robust SE
+                                                          atmean = FALSE)) # average partial effect -"atmean" = "FALSE" calculates AMEs instead of MEMs
+# margins
+logit_radio_audit_corrupt_prob_elect_no_controls_margins<-summary(margins(logit_radio_audit_corrupt_prob_elect_no_controls))
+# margins at levels
+logit_radio_audit_corrupt_prob_elect_no_controls_margins_levels<-summary(margins(logit_radio_audit_corrupt_prob_elect_no_controls, at=list(lfalha_total=c(1:6)),variables = c("lfalha_total","radio_am") )) 
+
+persp(logit_radio_audit_corrupt_prob_elect_no_controls,"lfalha_total","radio_am",  what = "effect",
+      main = "AME eq 3 without control") # reference: https://cran.r-project.org/web/packages/margins/vignettes/Introduction.html#The_plot()_method_for_%E2%80%9Cmargins%E2%80%9D_objects
+
+# with controls
+logit_radio_audit_corrupt_prob_elect_controls <- glm(elected ~treat*lfalha_total*radio_am + perctg_urban+illiteracy_rate+
+                                                       ln_gdp_capita, 
+                                                        family = binomial(link = logit), data = balance_test)
+persp(logit_radio_audit_corrupt_prob_elect_controls,"lfalha_total","radio_am",  what = "effect",
+      main = "AME eq 3 with control")
+
+# # quadratic
+# quadratic_logit_audit_corrupt_prob_elect_controls_AME<-(logitmfx(elected ~ treat:lfalha_total:radio_am + treat:I(lfalha_total^2):radio_am+ 
+#                                                                    perctg_urban+illiteracy_rate+ ln_gdp_capita, 
+#                                                                  data = balance_test,
+#                                                                  robust = F, # calculate robust SE
+#                                                                  atmean = FALSE))
+# persp(quadratic_logit_audit_corrupt_prob_elect_controls_AME,"lfalha_total", "treat", "radio_am", what = "effect",
+#       main = "AME eq 3 quadratic form with control")
+
+
 
 
 
@@ -536,3 +1067,91 @@ ggplot() +
 #   labs(x = "Date", y = "Log falha total, Average") +
 #   geom_vline(xintercept = as.Date(c("2008-10-26","2012-10-26")))+ 
 #   theme_minimal()
+
+# previous figure 2
+# drew_municipalities_first_terms<- drew_municipalities %>% 
+#   filter(NAME_MUNICIPALITY %in% first_term_drew_mun$`unique(votes_per_precinct$NAME_MUNICIPALITY)`) # keeping municipalities audited twice 
+# drew_municipalities_first_terms<- drew_municipalities_first_terms %>%
+#   distinct(NAME_MUNICIPALITY, drew_municipalities_first_terms$year != 2013, .keep_all = T) %>% select(1:26) # but only those in 2013
+# The 2008 elections happened on the 5th October (1st round) and 26th October (2nd round)
+# The 2012 elections happened on the 7th October (1st round) and 28th October (2nd round)
+
+# previous figure 4
+# share_votes_by_corruption_levels<-subset(votes_per_precinct,sorteio<34)
+# share_votes_by_corruption_levels<-share_votes_by_corruption_levels %>%
+#   dplyr::group_by(NAME_MUNICIPALITY, UF) %>%
+#   dplyr::summarize(relection_rate = ((sum(Elected)/nrow(share_votes_by_corruption_levels))*nrow(share_votes_by_corruption_levels))/100, # counts the n°of sections won by the candidate divided by all the sections and it multiples the latter calculation by the number of section (this penalizes municipalities with few sections)
+#             mean_lfalha_total= mean(lfalha_total),
+#             mean_lmismanagement= mean(lmismanagement),
+#             mean_illiterate= mean(share_illit),
+#             mean_semi_illit= mean(share_semi_illit),
+#             draw=mean(sorteio),
+#             share_vote_mean = mean(Share)) 
+# share_votes_by_corruption_levels$relection_rate<-
+#   (share_votes_by_corruption_levels$relection_rate-min(share_votes_by_corruption_levels$relection_rate))/ # normalize 0-1 re-election rates
+#    (max(share_votes_by_corruption_levels$relection_rate)-min(share_votes_by_corruption_levels$relection_rate)) 
+# share_votes_by_corruption_levels$treat<-ifelse(share_votes_by_corruption_levels$draw<27,"pre-elections","post-elections")
+
+# figure 4 in lines
+# plot_share_votes_by_corruption_levels = plot_share_votes_by_corruption_levels %>% 
+#   mutate(ds = as.factor(treat)) %>% # Temporary changes the type of ds from integer to factor so ggplot understands
+#   ggplot(aes(x = lfalha_total, y = SHARE_VOTES_CANDIDATURE, group = ds, col = ds)) +
+#   stat_summary(fun = "mean") +
+#   # stat_summary(geom = "line") + # Displays the mean as a line
+#   # stat_summary(geom = "point") + # Displays the mean as a point
+#   labs(col = "Audited:") + # Changes the name from "ds" to "Group" in the legend
+#   theme_classic() + # Changes the theme
+#   geom_smooth(span = 0.4, aes(fill = treat),se=F) +
+#   labs(x = "Mean acts of corruption", y = "Share votes, (mean)") +
+#   guides(fill="none")+
+#   scale_y_continuous(labels = scales::percent)+
+#   theme(legend.position = c(0.24, 0.88)) # Change aspect ratio of the plot. Not necessary, but some prefer it.
+# plot_share_votes_by_corruption_levels
+
+# # previous figure 5
+# share_votes_by_corruption_levels_radio<- merge(share_votes_by_corruption_levels, drew_municipalities_first_terms, by.x=c("NAME_MUNICIPALITY", "UF"), by.y=c("NAME_MUNICIPALITY", "UF"), all=F) # identify municipalities with radio
+# share_votes_by_corruption_levels_radio<-subset(share_votes_by_corruption_levels_radio,year<2013) # remove 2013 observations previously merged
+# share_votes_by_corruption_levels_radio$status<-paste(share_votes_by_corruption_levels_radio$treat, share_votes_by_corruption_levels_radio$radio_am)
+# share_votes_by_corruption_levels_radio %>%
+#   ggplot(aes(mean_lfalha_total, share_vote_mean, color = status)) + 
+#   labs(x = "Mean acts of corruption (logarithm scale)", y = "Share of votes, (mean)") + 
+#   scale_color_discrete(name = "Treatment condition", labels=c("Post-elections - No radio", "Post-elections - Radio", 
+#                                                               "Pre-elections - No radio", "Pre-elections - Radio"))+
+#   geom_smooth(span = 0.6, aes(fill = status),se=FALSE) +
+#   guides(fill="none")+
+#   scale_y_continuous(labels = scales::percent)+
+#   theme_bw()+
+#   theme(legend.position = c(0.30, 0.84))
+
+# Figure 5 
+# OVERLEAF: With the same sample of the previous figure, \emph{Figure 5} disaggregate the previous one by the presence or absence of local radio. It would be expected that relatively lower shares of votes for incumbents ruling municipalities without local radios. The figure roughly suggest such interpretation at the middle range of the mean acts of corruption. Except from lower levels of corruption, \emph{Figure 5} follows the pattern from (\cite{ferraz_exposing_2008}, p.740). 
+# plot_share_votes_by_corruption_levels$status<-paste(plot_share_votes_by_corruption_levels$treat, plot_share_votes_by_corruption_levels$radio_am)
+# plot_share_votes_by_corruption_levels %>%
+#   ggplot(aes(lfalha_total, SHARE_VOTES_CANDIDATURE, color = status)) + 
+#   labs(x = "Mean acts of corruption (logarithm scale)", y = "Share of votes, (mean)") + 
+#   scale_color_discrete(name = "Treatment condition", labels=c("Post-elections - No radio", "Post-elections - Radio", 
+#                                                               "Pre-elections - No radio", "Pre-elections - Radio"))+
+#   geom_smooth(span = 0.6, aes(fill = status),se=FALSE) +
+#   guides(fill="none")+
+#   scale_y_continuous(labels = scales::percent)+
+#   theme_bw()+
+#   theme(legend.position = c(0.30, 0.84))
+# 
+# plot_share_votes_by_corruption_levels %>%
+#   # Add a new column called 'bin': cut the initial corruption in bins
+#   mutate( bin=cut_width(exp(lfalha_total), width=30, boundary=0) ) %>%
+#   ggplot( aes(x=bin, y=SHARE_VOTES_CANDIDATURE, fill=status)) +
+#   geom_boxplot() +
+#   theme_minimal()+
+#   theme(text = element_text(size=10),axis.text.x = element_text(angle=45, hjust=1)) +
+#   xlab("Acts of corruption")+
+#   ylab("Share of votes 2008 elections")+
+#   theme(legend.title=element_blank())
+
+# Table 5
+# share of votes with radio
+# eval_log_share_votes_radio = lm(log_share_votes ~ treat+ radio_am +tv +log_college + high_school+ elementary+
+#                                   no_elementary+ perctg_employed+ log_employer+ perctg_informal_workers+
+#                                   log_self_emplyed+ perctg_urban+ illiteracy_rate +ln_gdp_capita +
+#                                   perctg_earning_quarter_mwage+ log_unemploym, data = balance_test)
+# GlobalCrit(eval_share_votes_radio) # AIC BIC indicates BEIJMP as best model: radio_am, high_school, perctg_informal, illiteracy rate, log_unempl

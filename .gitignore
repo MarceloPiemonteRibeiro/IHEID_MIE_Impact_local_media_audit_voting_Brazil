@@ -12,3 +12,10 @@ profile_voters_section_year_state_12/
 Sample.pdf
 figures and tables/
 votes_per_precinct.xlsx
+controls/
+GlobalCrit.R
+PlotResidX.R
+ProcStep.R
+R2wRob.R
+TabPredict.R
+VIF.R
