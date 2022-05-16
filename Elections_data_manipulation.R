@@ -1034,6 +1034,44 @@ logit_radio_audit_corrupt_prob_elect_no_controls_margins_levels<-summary(margins
 persp(logit_radio_audit_corrupt_prob_elect_no_controls,"lfalha_total","radio_am",  what = "effect",
       main = "AME eq 3 without control") # reference: https://cran.r-project.org/web/packages/margins/vignettes/Introduction.html#The_plot()_method_for_%E2%80%9Cmargins%E2%80%9D_objects
 
+# including radio level information
+balance_test$treat_01<-ifelse(balance_test$treat=="pre-elections",0,1)
+logit_radio_audit_corrupt_prob_elect_controls <- glm(elected ~treat_01*lfalha_total*radio_am, 
+                                                     family = binomial(link = logit), data = balance_test)
+treat_s <- with(balance_test, seq(min(treat_01), max(treat_01),length=25))
+lfalha_total_s <- with(balance_test, seq(min(lfalha_total), max(lfalha_total), length=25))
+pred_fun <- function(x,y, radio_am=0){
+  tmp <- data.frame(treat_01 = x, lfalha_total = y, radio_am=radio_am)
+  predict(logit_radio_audit_corrupt_prob_elect_controls, newdata=tmp, type="response")
+}
+p0 <- outer(treat_s, lfalha_total_s, pred_fun)
+p1 <- outer(treat_s, lfalha_total_s, pred_fun, radio_am=1)
+persp(treat_s, lfalha_total_s, p0, theta=-55, col=rgb(.75,.65, .95, .35),phi = 15,ticktype = "detailed",border = T,
+      xlab = "audited pre-post polls",
+      ylab="corruption level (log)",
+      main = "Predicted probability eq 3 without control",sub = "audited pre-post polls = 0 or 1 & purple= no radio, grey=radio in the municipality", 
+      zlab="prob(re-election)") 
+par(new=TRUE)
+persp(treat_s, lfalha_total_s, p1, theta=-55, col=rgb(0.1,0,0,.15), xlab="", ylab="", zlab="",phi = 15,border = T, box=F)
+
+# change axis
+radioam_s <- with(balance_test, seq(min(radio_am), max(radio_am),length=25))
+lfalha_total_s <- with(balance_test, seq(min(lfalha_total), max(lfalha_total), length=25))
+pred_fun <- function(x,y, treat_01=0){
+  tmp <- data.frame(radio_am = x, lfalha_total = y, treat_01=treat_01)
+  predict(logit_radio_audit_corrupt_prob_elect_controls, newdata=tmp, type="response")
+}
+p0 <- outer(radioam_s, lfalha_total_s, pred_fun)
+p1 <- outer(radioam_s, lfalha_total_s, pred_fun, treat_01=1)
+persp(radioam_s, lfalha_total_s, p0, theta=-67, col=rgb(.75,.65, .95, .35),phi = 15,ticktype = "detailed",border = T,
+      # xlab = "audited pre-post polls",
+      ylab="corruption level (log)",
+      main = "Predicted probability eq 3 without control",sub = "radio_am_s = 0 or 1 & purple= audit pre, grey=audit pro", 
+      zlab="prob(re-election)") 
+par(new=TRUE)
+persp(radioam_s, lfalha_total_s, p1, theta=-67, col=rgb(0.1,0,0,.15), xlab="", ylab="", zlab="",phi = 15,border = T, box=F)
+
+
 # with controls
 logit_radio_audit_corrupt_prob_elect_controls <- glm(elected ~treat*lfalha_total*radio_am + perctg_urban+illiteracy_rate+
                                                        ln_gdp_capita, 
@@ -1041,16 +1079,29 @@ logit_radio_audit_corrupt_prob_elect_controls <- glm(elected ~treat*lfalha_total
 persp(logit_radio_audit_corrupt_prob_elect_controls,"lfalha_total","radio_am",  what = "effect",
       main = "AME eq 3 with control")
 
-# # quadratic
-# quadratic_logit_audit_corrupt_prob_elect_controls_AME<-(logitmfx(elected ~ treat:lfalha_total:radio_am + treat:I(lfalha_total^2):radio_am+ 
-#                                                                    perctg_urban+illiteracy_rate+ ln_gdp_capita, 
-#                                                                  data = balance_test,
-#                                                                  robust = F, # calculate robust SE
-#                                                                  atmean = FALSE))
-# persp(quadratic_logit_audit_corrupt_prob_elect_controls_AME,"lfalha_total", "treat", "radio_am", what = "effect",
-#       main = "AME eq 3 quadratic form with control")
 
 
+
+
+
+
+#x1 <- glm(hihp ~ drat * wt * am, data = mtcars, family=binomial)
+# drat_s <- with(mtcars, seq(min(drat), max(drat),length=25))
+# wt_s <- with(mtcars, seq(min(wt), max(wt), length=25))
+
+# pred_fun <- function(x,y, am=0){
+#   tmp <- data.frame(drat = x, wt = y, am=am)
+#   predict(x1, newdata=tmp, type="response")
+# }
+# p0 <- outer(drat_s, wt_s, pred_fun)
+# p1 <- outer(drat_s, wt_s, pred_fun, am=1)
+# persp(drat_s, wt_s, p0, zlim=c(0,1), theta=-50, col=rgb(.75,.75, .75, .75), 
+#       xlab = "Axle Ratio", 
+#       ylab="Weight", 
+#       zlab="Predicted Probability")
+# 
+# par(new=TRUE)
+# persp(drat_s, wt_s, p1, zlim=c(0,1), theta=-50, col=rgb(1,0,0,.75), xlab="", ylab="", zlab="")
 
 
 
