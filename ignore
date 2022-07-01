@@ -110,17 +110,17 @@ incumbents_2008<-read.csv("consulta_cand_2008_BRASIL.csv",header=T, sep=";") %>%
   #filter(ST_REELEICAO=="S") %>%
   mutate(unique_municipality_id=paste(NM_UE,SG_UF)) %>%
   mutate(unique_candidate_id=paste(NM_CANDIDATO,unique_municipality_id)) %>%
-  mutate(DESCRIPT_ELECTION=ifelse(NM_TIPO_ELEICAO=="ELEI«√O ORDIN¡RIA","ELEI«’ES 2008","ELEI«’ES SUPLEMENTARES 2008"))
+  mutate(DESCRIPT_ELECTION=ifelse(NM_TIPO_ELEICAO=="ELEI√á√ÉO ORDIN√ÅRIA","ELEI√á√ïES 2008","ELEI√á√ïES SUPLEMENTARES 2008"))
 incumbents_2008$unique_municipality_id<- stri_replace_all_regex(incumbents_2008$unique_municipality_id,
-                                         pattern=c("IGARAP…-A«U PA","SERRA CAIADA RN"),
-                                         replacement = c("IGARAP… PA","PRESIDENTE JUSCELINO RN"),
-                                         vectorize=FALSE) # missing municipality in the data : 	ITUA«U BA
+                                         pattern=c("IGARAP√â-A√áU PA","SERRA CAIADA RN"),
+                                         replacement = c("IGARAP√â PA","PRESIDENTE JUSCELINO RN"),
+                                         vectorize=FALSE) # missing municipality in the data : 	ITUA√áU BA
 incumbents_2008<-incumbents_2008 %>% 
   filter(unique_municipality_id %in% # filter only candidates trying re-election in the audited municipalities 
             drew_and_coded_municipalities$unique_municipality_id) # 934 unique municipalities
 # 2012 : 
 incumbents_2012<-read.csv("consulta_cand_2012_BRASIL.csv",header=T, sep=";") %>%
-  filter(CD_CARGO==11 & NR_TURNO==1) %>% # NAı divulgavel
+  filter(CD_CARGO==11 & NR_TURNO==1) %>% # NA√µ divulgavel
   dplyr::select(-c(DT_GERACAO,HH_GERACAO,TP_ABRANGENCIA,SG_UE,CD_CARGO,
                    NM_SOCIAL_CANDIDATO, NR_CPF_CANDIDATO, NM_EMAIL,DS_SITUACAO_CANDIDATURA, NM_PARTIDO,
                    SQ_COLIGACAO,CD_NACIONALIDADE,CD_MUNICIPIO_NASCIMENTO, NM_MUNICIPIO_NASCIMENTO,
@@ -130,9 +130,9 @@ incumbents_2012<-read.csv("consulta_cand_2012_BRASIL.csv",header=T, sep=";") %>%
   mutate(unique_municipality_id=paste(NM_UE,SG_UF))%>%
   mutate(unique_candidate_id=paste(NM_CANDIDATO,unique_municipality_id))
 incumbents_2012$unique_municipality_id<- stri_replace_all_regex(incumbents_2012$unique_municipality_id,
-                                                                pattern=c("IGARAP…-A«U PA","SERRA CAIADA RN","PEDRA BRANCA DO AMAPARI AP"),
-                                                                replacement = c("IGARAP… PA","PRESIDENTE JUSCELINO RN","¡GUA BRANCA DO AMAPARI AP"),
-                                                                vectorize=FALSE) # missing municipality in the data : 	ITUA«U BA
+                                                                pattern=c("IGARAP√â-A√áU PA","SERRA CAIADA RN","PEDRA BRANCA DO AMAPARI AP"),
+                                                                replacement = c("IGARAP√â PA","PRESIDENTE JUSCELINO RN","√ÅGUA BRANCA DO AMAPARI AP"),
+                                                                vectorize=FALSE) # missing municipality in the data : 	ITUA√áU BA
 incumbents_2012<-incumbents_2012 %>% 
   filter(unique_municipality_id %in% # filter only candidates trying re-election in the audited municipalities 
            drew_and_coded_municipalities$unique_municipality_id) # 935 unique municipalities
@@ -141,86 +141,86 @@ incumbents_2012<-incumbents_2012 %>%
 # if error of API connection try to run the chunks again 
 # education levels ####
 education_levels_municipalities<-get_sidra(api = "/t/3540/n6/all/v/1000140/p/all/c1568/9493,9494,9495,99713/c1/0/c2/0/c86/0/c58/0/d/v1000140%202") %>%
-  reshape(idvar = "MunicÌpio", timevar = "NÌvel de instruÁ„o", direction = "wide", v.names="Valor") %>% 
-  dplyr::select("Unidade de Medida",MunicÌpio, "MunicÌpio (CÛdigo)", "Unidade de Medida", Ano,
-                "Valor.Superior completo","Valor.MÈdio completo e superior incompleto", "Valor.Fundamental completo e mÈdio incompleto",
-                "Valor.Sem instruÁ„o e fundamental incompleto") %>%
-  mutate(state=str_sub(MunicÌpio,start=-2,end=-1))%>% 
-  mutate(MunicÌpio=substr(MunicÌpio,1,nchar(MunicÌpio)-4))
+  reshape(idvar = "Munic√≠pio", timevar = "N√≠vel de instru√ß√£o", direction = "wide", v.names="Valor") %>% 
+  dplyr::select("Unidade de Medida",Munic√≠pio, "Munic√≠pio (C√≥digo)", "Unidade de Medida", Ano,
+                "Valor.Superior completo","Valor.M√©dio completo e superior incompleto", "Valor.Fundamental completo e m√©dio incompleto",
+                "Valor.Sem instru√ß√£o e fundamental incompleto") %>%
+  mutate(state=str_sub(Munic√≠pio,start=-2,end=-1))%>% 
+  mutate(Munic√≠pio=substr(Munic√≠pio,1,nchar(Munic√≠pio)-4))
 # employment ####
 employment_levels_municipalities<-get_sidra(api="/t/2031/n6/all/v/1000696/p/last%201/c11913/0,96166,96167,96169,96170,96171,96173/d/v1000696%202") %>%
-  reshape(idvar = "MunicÌpio",timevar = "PosiÁ„o na ocupaÁ„o e categoria do emprego no trabalho principal", direction = "wide", v.names="Valor") %>% 
-  dplyr::select("Unidade de Medida",MunicÌpio, "MunicÌpio (CÛdigo)", Ano,
-                "Valor.Conta prÛpria","Valor.Empregado", "Valor.Empregado - com carteira de trabalho assinada",
+  reshape(idvar = "Munic√≠pio",timevar = "Posi√ß√£o na ocupa√ß√£o e categoria do emprego no trabalho principal", direction = "wide", v.names="Valor") %>% 
+  dplyr::select("Unidade de Medida",Munic√≠pio, "Munic√≠pio (C√≥digo)", Ano,
+                "Valor.Conta pr√≥pria","Valor.Empregado", "Valor.Empregado - com carteira de trabalho assinada",
                 "Valor.Empregado - outro sem carteira de trabalho assinada","Valor.Empregador", 
-                "Valor.Trabalhador na produÁ„o para o prÛprio consumo") %>%
-  mutate(state=str_sub(MunicÌpio,start=-2,end=-1))%>% 
-  mutate(MunicÌpio=substr(MunicÌpio,1,nchar(MunicÌpio)-4))
+                "Valor.Trabalhador na produ√ß√£o para o pr√≥prio consumo") %>%
+  mutate(state=str_sub(Munic√≠pio,start=-2,end=-1))%>% 
+  mutate(Munic√≠pio=substr(Munic√≠pio,1,nchar(Munic√≠pio)-4))
 
 # urban-rural ####
 urban_rural_shares_municipalities<-get_sidra(api="/t/1309/n6/all/v/1000093/p/last%201/c2/0/c11277/0,90749,90752,90754/d/v1000093%202") %>%
-  reshape(idvar = "MunicÌpio",timevar = "SituaÁ„o e localizaÁ„o da ·rea", direction = "wide", v.names="Valor") %>% 
-  dplyr::select("Unidade de Medida",MunicÌpio, "MunicÌpio (CÛdigo)", Ano,
-                "Valor.Rural - aglomerado - povoado", "Valor.Rural - ·rea rural (exceto aglomerado)",
-                "Valor.Urbana - cidade ou vila - ·rea urbanizada") %>% 
-  mutate(state=str_sub(MunicÌpio,start=-2,end=-1))%>% 
-  mutate(MunicÌpio =substr(MunicÌpio,1,nchar(MunicÌpio)-4))
+  reshape(idvar = "Munic√≠pio",timevar = "Situa√ß√£o e localiza√ß√£o da √°rea", direction = "wide", v.names="Valor") %>% 
+  dplyr::select("Unidade de Medida",Munic√≠pio, "Munic√≠pio (C√≥digo)", Ano,
+                "Valor.Rural - aglomerado - povoado", "Valor.Rural - √°rea rural (exceto aglomerado)",
+                "Valor.Urbana - cidade ou vila - √°rea urbanizada") %>% 
+  mutate(state=str_sub(Munic√≠pio,start=-2,end=-1))%>% 
+  mutate(Munic√≠pio =substr(Munic√≠pio,1,nchar(Munic√≠pio)-4))
 
 # illiteracy rates ####
 illiteracy_rates_municipalities = read.csv("illiteracy_rates_2010_municipalities_tabnet_datasus.csv", skip = 3, header = T, sep=";") %>%
   slice(-c(5569, 5568, 5567, 5566))
-illiteracy_rates_municipalities['MunicÌpio (CÛdigo)']<-str_sub(illiteracy_rates_municipalities$MunicÌpio,start=1,end=6)
-illiteracy_rates_municipalities$MunicÌpio<-substring(illiteracy_rates_municipalities$MunicÌpio,8)
+illiteracy_rates_municipalities['Munic√≠pio (C√≥digo)']<-str_sub(illiteracy_rates_municipalities$Munic√≠pio,start=1,end=6)
+illiteracy_rates_municipalities$Munic√≠pio<-substring(illiteracy_rates_municipalities$Munic√≠pio,8)
 
 # gdp per capita ####
 gdp_capita_municipalities = read.csv("gdp_per_capita_2008_municipalities_tabnet_datasus.csv", skip = 3, header = T, sep=";") %>%
   slice(-c(5577, 5576, 5575, 5574, 5573, 5572, 5571, 5570, 5569, 5568, 5567, 5566, 5565))
-gdp_capita_municipalities['MunicÌpio (CÛdigo)']<-str_sub(gdp_capita_municipalities$MunicÌpio,start=1,end=6)
-gdp_capita_municipalities$MunicÌpio<-substring(gdp_capita_municipalities$MunicÌpio,8)
+gdp_capita_municipalities['Munic√≠pio (C√≥digo)']<-str_sub(gdp_capita_municipalities$Munic√≠pio,start=1,end=6)
+gdp_capita_municipalities$Munic√≠pio<-substring(gdp_capita_municipalities$Munic√≠pio,8)
 
 # unemployment rates ####
 unemployment_rates_municipalities = read.csv("unemployment_rates_2010_municipalities_tabnet_datasus.csv", skip = 3, header = T, sep=";") %>%
   slice(-c(5557,5556, 5555, 5554, 5553, 5552, 5551, 5550))
-unemployment_rates_municipalities['MunicÌpio (CÛdigo)']<-str_sub(unemployment_rates_municipalities$MunicÌpio,start=1,end=6)
-unemployment_rates_municipalities$MunicÌpio<-substring(unemployment_rates_municipalities$MunicÌpio,8)
+unemployment_rates_municipalities['Munic√≠pio (C√≥digo)']<-str_sub(unemployment_rates_municipalities$Munic√≠pio,start=1,end=6)
+unemployment_rates_municipalities$Munic√≠pio<-substring(unemployment_rates_municipalities$Munic√≠pio,8)
 
 # income levels <1/2 min wage ####
 perc_pop_income_less_half_minw_municipalities = read.csv("perctg_population_income_less_half_min_wage_2010_municipalities_tabnet_datasus.csv", skip = 3, header = T, sep=";") %>%
   slice(-c(5575, 5574, 5573, 5572, 5571, 5570, 5569, 5568, 5567, 5566))
-perc_pop_income_less_half_minw_municipalities['MunicÌpio (CÛdigo)']<-str_sub(perc_pop_income_less_half_minw_municipalities$MunicÌpio,start=1,end=6)
-perc_pop_income_less_half_minw_municipalities$MunicÌpio<-substring(perc_pop_income_less_half_minw_municipalities$MunicÌpio,8)
+perc_pop_income_less_half_minw_municipalities['Munic√≠pio (C√≥digo)']<-str_sub(perc_pop_income_less_half_minw_municipalities$Munic√≠pio,start=1,end=6)
+perc_pop_income_less_half_minw_municipalities$Munic√≠pio<-substring(perc_pop_income_less_half_minw_municipalities$Munic√≠pio,8)
 
 # income levels <1/4 min wage ####
 perc_pop_income_less_quarter_minw_municipalities = read.csv("perctg_population_income_less_quarter_of_min_wage_2010_municipalities_tabnet_datasus.csv", skip = 3, header = T, sep=";") %>%
   slice(-c(5575, 5574, 5573, 5572, 5571, 5570, 5569, 5568, 5567, 5566))
-perc_pop_income_less_quarter_minw_municipalities['MunicÌpio (CÛdigo)'] <-str_sub(perc_pop_income_less_quarter_minw_municipalities$MunicÌpio,start=1,end=6)
-perc_pop_income_less_quarter_minw_municipalities$MunicÌpio<-substring(perc_pop_income_less_quarter_minw_municipalities$MunicÌpio,8) 
+perc_pop_income_less_quarter_minw_municipalities['Munic√≠pio (C√≥digo)'] <-str_sub(perc_pop_income_less_quarter_minw_municipalities$Munic√≠pio,start=1,end=6)
+perc_pop_income_less_quarter_minw_municipalities$Munic√≠pio<-substring(perc_pop_income_less_quarter_minw_municipalities$Munic√≠pio,8) 
 
 # assemble control variables together
 controls_sidra<-Reduce(function(x, y) merge(x, y, all=TRUE), list(education_levels_municipalities, employment_levels_municipalities, urban_rural_shares_municipalities))
-controls_sidra$`MunicÌpio (CÛdigo)`<- substr(controls_sidra$`MunicÌpio (CÛdigo)`, 1, 6)
+controls_sidra$`Munic√≠pio (C√≥digo)`<- substr(controls_sidra$`Munic√≠pio (C√≥digo)`, 1, 6)
 controls_datasus<-Reduce(function(x, y) merge(x, y, all=TRUE), list(gdp_capita_municipalities, illiteracy_rates_municipalities, perc_pop_income_less_half_minw_municipalities,
                                                                     perc_pop_income_less_quarter_minw_municipalities, unemployment_rates_municipalities)) 
-controls<-merge(controls_sidra,controls_datasus, by="MunicÌpio (CÛdigo)")%>%
-  mutate(NAME_MUNICIPALITY=toupper(MunicÌpio.x)) %>% # upper case municipality names
+controls<-merge(controls_sidra,controls_datasus, by="Munic√≠pio (C√≥digo)")%>%
+  mutate(NAME_MUNICIPALITY=toupper(Munic√≠pio.x)) %>% # upper case municipality names
   mutate(NAME_MUNICIPALITY=substr(NAME_MUNICIPALITY,1,nchar(NAME_MUNICIPALITY)-1))%>% # remove extra blank space
   mutate(unique_municipality_id=paste(NAME_MUNICIPALITY,state))%>%
-  dplyr::select(-c(NAME_MUNICIPALITY,MunicÌpio.x,MunicÌpio.y,"Valor.Rural - aglomerado - povoado"))%>%
+  dplyr::select(-c(NAME_MUNICIPALITY,Munic√≠pio.x,Munic√≠pio.y,"Valor.Rural - aglomerado - povoado"))%>%
   mutate(unique_municipality_id= stri_replace_all_regex(unique_municipality_id, # accents are an issue to match, align 
-                                                        pattern=c("S√O FELIPE D'OESTE RO","ITAPAJ… CE",
-                                                                  "IGARAP…-A«U PA","PEDRA BRANCA DO AMAPARI AP"),
-                                                        replacement=c("S√O FELIPE DO OESTE","ITAPAG… CE","IGARAP… PA",
-                                                                      "¡GUA BRANCA DO AMAPARI AP"),
+                                                        pattern=c("S√ÉO FELIPE D'OESTE RO","ITAPAJ√â CE",
+                                                                  "IGARAP√â-A√áU PA","PEDRA BRANCA DO AMAPARI AP"),
+                                                        replacement=c("S√ÉO FELIPE DO OESTE","ITAPAG√â CE","IGARAP√â PA",
+                                                                      "√ÅGUA BRANCA DO AMAPARI AP"),
                                                         vectorize=FALSE))%>%
-  dplyr::rename(c('with_college'='Valor.Superior completo','no_elementary'='Valor.Sem instruÁ„o e fundamental incompleto',
-                  'perctg_employed'='Valor.Empregado','perctg_rural'='Valor.Rural - ·rea rural (exceto aglomerado)',
-                  'perctg_urban'='Valor.Urbana - cidade ou vila - ·rea urbanizada','gdp_capita'='PIB_per_capita','illiteracy_rate'='Taxa_de_analfabetismo',
-                  'perctg_earning_half_mwage'='X._populaÁ„o_com_renda_._1.2_SM','unemploym_rate'='Taxa_de_desemprego_16a_e.',
-                  'perctg_earning_quarter_mwage'="X._populaÁ„o_com_renda_._1.4_SM",
-                  "self_employed"="Valor.Trabalhador na produÁ„o para o prÛprio consumo","employer"="Valor.Empregador",
+  dplyr::rename(c('with_college'='Valor.Superior completo','no_elementary'='Valor.Sem instru√ß√£o e fundamental incompleto',
+                  'perctg_employed'='Valor.Empregado','perctg_rural'='Valor.Rural - √°rea rural (exceto aglomerado)',
+                  'perctg_urban'='Valor.Urbana - cidade ou vila - √°rea urbanizada','gdp_capita'='PIB_per_capita','illiteracy_rate'='Taxa_de_analfabetismo',
+                  'perctg_earning_half_mwage'='X._popula√ß√£o_com_renda_._1.2_SM','unemploym_rate'='Taxa_de_desemprego_16a_e.',
+                  'perctg_earning_quarter_mwage'="X._popula√ß√£o_com_renda_._1.4_SM",
+                  "self_employed"="Valor.Trabalhador na produ√ß√£o para o pr√≥prio consumo","employer"="Valor.Empregador",
                   "perctg_informal_workers"="Valor.Empregado - outro sem carteira de trabalho assinada",
-                  "perctg_formal_workers"="Valor.Empregado - com carteira de trabalho assinada","independent"="Valor.Conta prÛpria",
-                  "elementary"="Valor.Fundamental completo e mÈdio incompleto","high_school"="Valor.MÈdio completo e superior incompleto")) 
+                  "perctg_formal_workers"="Valor.Empregado - com carteira de trabalho assinada","independent"="Valor.Conta pr√≥pria",
+                  "elementary"="Valor.Fundamental completo e m√©dio incompleto","high_school"="Valor.M√©dio completo e superior incompleto")) 
 
 # candidates votes per municipality ####
 setwd("../votes_candidates_munzona_year_state") # import 2008 and 2012 related data
@@ -255,15 +255,15 @@ votes_per_candidate = map_dfr(votes_municipalities_names, read_votes_municip_can
 # 2012:
 votes_per_candidate_2012<-filter(votes_per_candidate, YEAR_ELECTION != 2008 & YEAR_ELECTION != 2004 & YEAR_ELECTION != 2000)
 votes_per_candidate_2012$unique_municipality_id <- stri_replace_all_regex(votes_per_candidate_2012$unique_municipality_id,
-                                                                          pattern=c("IGARAP…-A«U PA","SERRA CAIADA RN","PEDRA BRANCA DO AMAPARI AP"),
-                                                                          replacement = c("IGARAP… PA","PRESIDENTE JUSCELINO RN","¡GUA BRANCA DO AMAPARI AP"),
+                                                                          pattern=c("IGARAP√â-A√áU PA","SERRA CAIADA RN","PEDRA BRANCA DO AMAPARI AP"),
+                                                                          replacement = c("IGARAP√â PA","PRESIDENTE JUSCELINO RN","√ÅGUA BRANCA DO AMAPARI AP"),
                                                                           vectorize=FALSE) # these 3 municipalities names are recorded differently in drew_municipalities 
 votes_per_candidate_2012<-
   votes_per_candidate_2012 %>% filter(unique_municipality_id %in% 
                                         (drew_and_coded_municipalities$unique_municipality_id)) %>% # consider results 1st turn# 935 unique municipalities
-  filter(!(RESULT=="2∫ TURNO")) %>% 
-  mutate(NM_TIPO_ELEICAO=ifelse(DESCRIPT_ELECTION=="ELEI«√O MUNICIPAL 2012","ELEI«√O ORDIN¡RIA",
-                                "ELEI«√O SUPLEMENTAR"))%>%
+  filter(!(RESULT=="2¬∫ TURNO")) %>% 
+  mutate(NM_TIPO_ELEICAO=ifelse(DESCRIPT_ELECTION=="ELEI√á√ÉO MUNICIPAL 2012","ELEI√á√ÉO ORDIN√ÅRIA",
+                                "ELEI√á√ÉO SUPLEMENTAR"))%>%
   group_by(unique_municipality_id,NM_TIPO_ELEICAO) %>% 
   mutate(
     share_vote = Total / sum(Total), # calculate vote shares
@@ -275,16 +275,16 @@ votes_per_candidate_2012<-
 # 2008:
 votes_per_candidate_2008<-filter(votes_per_candidate, YEAR_ELECTION != 2012 & YEAR_ELECTION != 2004 & YEAR_ELECTION != 2000) 
 votes_per_candidate_2008$unique_municipality_id <- stri_replace_all_regex(votes_per_candidate_2008$unique_municipality_id,
-                                                                          pattern=c("IGARAP…-A«U PA","SERRA CAIADA RN"),
-                                                                          replacement = c("IGARAP… PA","PRESIDENTE JUSCELINO RN"),
+                                                                          pattern=c("IGARAP√â-A√áU PA","SERRA CAIADA RN"),
+                                                                          replacement = c("IGARAP√â PA","PRESIDENTE JUSCELINO RN"),
                                                                           vectorize=FALSE) # these two municipalities names are recorded differently in drew_municipalities 
 votes_per_candidate_2008<-
   votes_per_candidate_2008 %>% filter(unique_municipality_id %in% 
                                    (drew_and_coded_municipalities$unique_municipality_id)) %>%  # 935 unique municipalities
-                                # filter(!(RESULT=="SUBSTITUÕDO"))%>% # [1] "SANTANA DO MUNDA⁄ AL" "TANQUE D'ARCA AL" "COL‘NIA LEOPOLDINA AL""GIRAU DO PONCIANO AL"  [5] "PINDOBA AL" "BOA NOVA BA" "MORRO DO CHAP…U BA" "IBIRAPITANGA BA"  # [9] "CACHOEIRA BA""PRESIDENTE TANCREDO NEVES BA" "IUIU BA""IBIRAPU√ BA" # [13] "SÕTIO DO MATO BA" "PACUJ¡ CE" "LAVRAS DA MANGABEIRA CE" "NOVO GAMA GO"# [17] "BURITIRANA MA""SANTA LUZIA MA""IMB… DE MINAS MG""RIO BRANCO MT"# [21] "FARO PA""AFU¡ PA""TERRA SANTA PA""NATUBA PB"# [25] "PICUÕ PB""CALDAS BRAND√O PB""SANTA TERESINHA PB""CALDEIR√O GRANDE DO PIAUÕ PI"# [29] "PAES LANDIM PI""BELA VISTA DA CAROBA PR""VERA CRUZ DO OESTE PR""BOCAI⁄VA DO SUL PR"# [33] "PRIMEIRO DE MAIO PR""CERRO GRANDE DO SUL RS""ITAARA RS""ITAQUI RS"# [37] "MALHADOR SE""VARGEM SP"  "ENGENHEIRO COELHO SP""BANDEIRANTES DO TOCANTINS TO"
-                                filter(!(RESULT=="2∫ TURNO"))%>% # consider results 1st turn
-                                mutate(NM_TIPO_ELEICAO=ifelse(DESCRIPT_ELECTION=="ELEI«’ES 2008","ELEI«√O ORDIN¡RIA",
-                                                              "ELEI«√O SUPLEMENTAR"))%>%
+                                # filter(!(RESULT=="SUBSTITU√çDO"))%>% # [1] "SANTANA DO MUNDA√ö AL" "TANQUE D'ARCA AL" "COL√îNIA LEOPOLDINA AL""GIRAU DO PONCIANO AL"  [5] "PINDOBA AL" "BOA NOVA BA" "MORRO DO CHAP√âU BA" "IBIRAPITANGA BA"  # [9] "CACHOEIRA BA""PRESIDENTE TANCREDO NEVES BA" "IUIU BA""IBIRAPU√É BA" # [13] "S√çTIO DO MATO BA" "PACUJ√Å CE" "LAVRAS DA MANGABEIRA CE" "NOVO GAMA GO"# [17] "BURITIRANA MA""SANTA LUZIA MA""IMB√â DE MINAS MG""RIO BRANCO MT"# [21] "FARO PA""AFU√Å PA""TERRA SANTA PA""NATUBA PB"# [25] "PICU√ç PB""CALDAS BRAND√ÉO PB""SANTA TERESINHA PB""CALDEIR√ÉO GRANDE DO PIAU√ç PI"# [29] "PAES LANDIM PI""BELA VISTA DA CAROBA PR""VERA CRUZ DO OESTE PR""BOCAI√öVA DO SUL PR"# [33] "PRIMEIRO DE MAIO PR""CERRO GRANDE DO SUL RS""ITAARA RS""ITAQUI RS"# [37] "MALHADOR SE""VARGEM SP"  "ENGENHEIRO COELHO SP""BANDEIRANTES DO TOCANTINS TO"
+                                filter(!(RESULT=="2¬∫ TURNO"))%>% # consider results 1st turn
+                                mutate(NM_TIPO_ELEICAO=ifelse(DESCRIPT_ELECTION=="ELEI√á√ïES 2008","ELEI√á√ÉO ORDIN√ÅRIA",
+                                                              "ELEI√á√ÉO SUPLEMENTAR"))%>%
                                 group_by(unique_municipality_id,NM_TIPO_ELEICAO) %>% 
                                 mutate(
                                   share_vote = Total / sum(Total), # calculate vote shares
@@ -294,7 +294,7 @@ votes_per_candidate_2008<-
                                ungroup()  
 # 2004 : 
 votes_per_candidate_2004<-filter(votes_per_candidate, YEAR_ELECTION != 2012 & YEAR_ELECTION != 2008 & YEAR_ELECTION != 2000)
-votes_per_candidate_2004[nrow(votes_per_candidate_2004) + 1,] <- list(1, 2004, "ELEICOES 2004",1,"SE","JOS… EUN¡PIO DOS SANTOS",
+votes_per_candidate_2004[nrow(votes_per_candidate_2004) + 1,] <- list(1, 2004, "ELEICOES 2004",1,"SE","JOS√â EUN√ÅPIO DOS SANTOS",
                                                                       4,"#NE#","DEFERIDO","ELEITO",11,"PP","GRACCHO CARDOSO",2065,
                                                                       "GRACCHO CARDOSO SE") # the dataset did not include the elected mayor in this municipality by mistake
 votes_per_candidate_2004$unique_municipality_id <- stri_replace_all_regex(votes_per_candidate_2004$unique_municipality_id, # accents are an issue because 2004 vs 2008 municipalities had slightly different accents
@@ -325,11 +325,11 @@ votes_per_candidate_2004<-subset(votes_per_candidate_2004, unique_municipality_i
                                    stringi::stri_trans_general(drew_and_coded_municipalities$unique_municipality_id,'LATIN-ASCII')) 
 votes_per_candidate_2004<-
   votes_per_candidate_2004 %>% 
-  filter(!(unique_municipality_id=="SAO JOAO D'ALIANCA GO" &  RESULT=="REN⁄NCIA/FALECIMENTO COM SUBSTITUI«√O")) %>%
+  filter(!(unique_municipality_id=="SAO JOAO D'ALIANCA GO" &  RESULT=="REN√öNCIA/FALECIMENTO COM SUBSTITUI√á√ÉO")) %>%
   filter(!(unique_municipality_id=="SAO JOAO D'ALIANCA GO" &  RESULT=="ELEITO")) %>% # SAO JOAO D'ALIANCA GO, elected mayor initially had its candidature denied due to corruption (0 votes)
   mutate(RESULT= replace(RESULT,NAME_CANDIDATE=="VALDOMIRO RAMOS DE MOURA","ELEITO")) %>% # SAO JOAO D'ALIANCA 2ND BEST TOOK PLACE
-  filter(!(RESULT=="REN⁄NCIA/FALECIMENTO COM SUBSTITUI«√O")) %>% #ELECTED ABIDICATED
-  filter(!(RESULT=="2∫ TURNO")) %>% #2 TURNO NOT CONSIDERED
+  filter(!(RESULT=="REN√öNCIA/FALECIMENTO COM SUBSTITUI√á√ÉO")) %>% #ELECTED ABIDICATED
+  filter(!(RESULT=="2¬∫ TURNO")) %>% #2 TURNO NOT CONSIDERED
   group_by(ACRONYM_STATE, NAME_MUNICIPALITY) %>% 
   mutate(
     share_vote = Total / sum(Total),
@@ -358,30 +358,30 @@ votes_per_candidate_2000$unique_municipality_id <- stri_replace_all_regex(votes_
                                                                                     "SAO GERALDO DO ARAGUAIA PA",	"SAO GONCALO DO ABAETE MG",	"SAO JERONIMO RS",	"SAO JOAO BATISTA MA",	"SAO JOAO DA LAGOA MG",	"SAO JOAO DA PONTA PA",	"SAO JOAO DA SERRA PI",	"SAO JOAO DA URTIGA RS",	"SAO JOAO D'ALIANCA GO",	"SAO JOAO DE IRACEMA SP",	"SAO JOAO DO MANTENINHA MG",	"SAO JOAO DO PARAISO MA",	"SAO JOAO EVANGELISTA MG",	"SAO JOAO PE",	"SAO JOAQUIM DE BICAS MG",	"SAO JOSE DA COROA GRANDE PE",	"SAO JOSE DE RIBAMAR MA",	"SAO JOSE DO CAMPESTRE RN",	"SAO JOSE DO EGITO PE",	"SAO JOSE DO JACURI MG",	"SAO JOSE DO SUL RS",	"SAO LOURENCO DO PIAUI PI",	"SAO LUIS DO QUITUNDE AL",	"SAO LUIZ RR",	"SAO MATEUS ES",	"SAO MIGUEL DO GOSTOSO RN",	"SAO MIGUEL DO TOCANTINS TO",	"SAO MIGUEL RN",	"SAO NICOLAU RS",	"SAO RAIMUNDO DO DOCA BEZERRA MA",	"SAO ROQUE DO CANAA ES",	"SAO SALVADOR DO TOCANTINS TO",	"SAO SEBASTIAO DA BOA VISTA PA",	"SAO SEBASTIAO DA GRAMA SP",	"SAO SEBASTIAO DE LAGOA DE ROCA PB",	"SAO SEBASTIAO DO OESTE MG",	"SAO SEBASTIAO DO PASSE BA",	"SAO SEBASTIAO DO RIO VERDE MG",						
                                                                                     "SAO SEBASTIAO DO UMBUZEIRO PB",	"SAO VICENTE RN",	"SAUDADE DO IGUACU PR",	"SEBASTIAO BARROS PI",	"SELVIRIA MS",	"SIRINHAEM PE",	"SITIO D'ABADIA GO",	"SITIO DO MATO BA",	"SITIO NOVO RN",	"TAMANDARE PE",	"TANGARA DA SERRA MT",	"TAPAUA AM",	"TAQUARACU DE MINAS MG",	"TAUBATE SP",	"TEFE AM",	"TEIXEIROPOLIS RO",	"TEJUCUOCA CE",	"TEOFILO OTONI MG",	"TERESINA DE GOIAS GO",	"TIMBAUBA PE",	"TRAIRAO PA",	"TRES ARROIOS RS",	"TRES LAGOAS MS",	"TREZE TILIAS SC",	"TURILANDIA MA",	"UBAIRA BA",	"UIBAI BA",	"UIRAMUTA RR",	"ULIANOPOLIS PA",	"URAI PR",	"URUCANIA MG",	"URUTAI GO",	"VALENCA BA",	"VARZEA DA PALMA MG",	"VESPASIANO CORREA RS",	"VIAMAO RS",	"VICOSA RN",	"VITORIA DO JARI AP",	"XAMBIOA TO",	"XEXEU PE",			
                                                                                     "PINDORAMA DE GOIAS TO","MATIAS OLIMPIO PI","JACOBINA DO PIAUI PI","ITAIPAVA DO GRAJAU MA","GONCALVES MG","ESTRELA DO INDAIA MG","BELEM DE MARIA PE","ARACOIABA PE","ANTONIO DIAS MG"),
-                                                                          replacement=c("¡GUA BRANCA DO AMAPARI AP","¡GUA DOCE DO MARANH√O MA","APICUM-A«U MA","ACARA⁄ CE","ADRIAN”POLIS PR","AFU¡ PA","¡GUA CLARA MS","¡GUA NOVA RN","¡GUA PRETA PE","¡GUAS VERMELHAS MG",
-                                                                                        "ALEGRETE DO PIAUÕ PI","ALIAN«A PE","ALTO ALEGRE DO PINDAR… MA","ALTO LONG¡ PI","ALVAR√ES AM","ALVIN”POLIS MG","AM…RICA DOURADA BA","ANAG… BA","ANAJ¡S PA","ANGICAL DO PIAUÕ PI","ANT‘NIO CARLOS SC",
+                                                                          replacement=c("√ÅGUA BRANCA DO AMAPARI AP","√ÅGUA DOCE DO MARANH√ÉO MA","APICUM-A√áU MA","ACARA√ö CE","ADRIAN√ìPOLIS PR","AFU√Å PA","√ÅGUA CLARA MS","√ÅGUA NOVA RN","√ÅGUA PRETA PE","√ÅGUAS VERMELHAS MG",
+                                                                                        "ALEGRETE DO PIAU√ç PI","ALIAN√áA PE","ALTO ALEGRE DO PINDAR√â MA","ALTO LONG√Å PI","ALVAR√ÉES AM","ALVIN√ìPOLIS MG","AM√âRICA DOURADA BA","ANAG√â BA","ANAJ√ÅS PA","ANGICAL DO PIAU√ç PI","ANT√îNIO CARLOS SC",
                                                                                         "BELA VISTA DO MARANHAO MA","CHIAPETTA RS","ENTRE-IJUIS RS","FERNANDO PEDROZA RN","IGARAPE PA", "ITAGUAJE PR","ITAMOGI MG","ITAPORANGA D'AJUDA SE",
                                                                                         "MANOEL URBANO AC","MOREIRA SALES PR","NAO-ME-TOQUE RS","NOVA BANDEIRANTES MT","OLHO D'AGUA DAS CUNHAS MA","OLHO D'AGUA DAS FLORES AL","OLHO D'AGUA DO CASADO AL",
                                                                                         "OLHO D'AGUA GRANDE AL","SAO CAITANO PE","SAO FELIPE DO OESTE RO","SAO JOAO D'ALIANCA GO","SAO JOSE DO CAMPESTRE RN","SAO LUIZ RR","SAO MIGUEL DO GOSTOSO RN",
                                                                                         "SAO RAIMUNDO DO DOCA BEZERRA MA","SAO SEBASTIAO DE LAGOA DE ROCA PB","SENADOR LA ROCQUE MA", "PRESIDENTE JUSCELINO RN", "SITIO D'ABADIA GO","SUD MENNUCCI SP","TANQUE D'ARCA AL",
                                                                                         "TEJUCUOCA CE","VISEU PA",
-                                                                                        "ANT‘NIO GON«ALVES BA",	"ANT‘NIO JO√O MS",	"APARECIDA DE GOI¬NIA GO",	"ARA«U GO",	"ARAGUAN√ MA",	"ARARANGU¡ SC",	"ARAUC¡RIA PR",	"ARA⁄JOS MG",	"AREN”POLIS GO",	"ARUJ¡ SP",	"ASS⁄ RN",	"AUGUSTO CORR A PA",	"AURORA DO PAR¡ PA",	"BAÕA FORMOSA RN",	"BANZA  BA",	"BAR√O DE MONTE ALTO MG",	"BARRA D'ALC¬NTARA PI",	"BARRA DO PIRAÕ RJ",	"BELA VISTA DO MARANH√O MA",	"BELA VISTA DO PIAUÕ PI",	"BEL…M DO PIAUÕ PI",	"BENTO GON«ALVES RS",	"BEQUIM√O MA",	"BET¬NIA DO PIAUÕ PI",	"BOA ESPERAN«A DO IGUA«U PR",	"BOCAI⁄VA DO SUL PR",	"BRASIL…IA AC",	"BREJOL¬NDIA BA",	"BURITI DE GOI¡S GO",	"CA«ADOR SC",
-                                                                                        "CACHOEIRA DO PIRI¡ PA",	"CAI«ARA DO RIO DO VENTO RN",	"CAI«ARA RS",	"CALDAS BRAND√O PB",	"CALDEIR√O GRANDE DO PIAUÕ PI",	"CALIF”RNIA PR",	"CAMET¡ PA",	"CAMPINAS DO PIAUÕ PI",	"CAMPO LARGO DO PIAUÕ PI",	"CANAN…IA SP",	"CAN¡POLIS BA",	"CANDEL¡RIA RS",	"CAPIT√O ANDRADE MG",	"CAPIT√O EN…AS MG",	"CARANAÕBA MG",	"CAREIRO DA V¡RZEA AM",	"CARIDADE DO PIAUÕ PI",	"CARI⁄S CE",	"CARM”POLIS DE MINAS MG",	"CATOL¬NDIA BA",	"CATURIT… PB",	"CENTEN¡RIO RS",	"CERQUEIRA C…SAR SP",	"CES¡RIO LANGE SP",	"CHAPADA GA⁄CHA MG",	"CHAPEC” SC",	"CIP” BA",	"CL¡UDIO MG",	"COCALZINHO DE GOI¡S GO",	"COLÕDER MT",	"COL‘NIA LEOPOLDINA AL",	"CONCEI«√O DA BARRA ES",
-                                                                                        "CONCEI«√O DO CASTELO ES",	"CONCEI«√O DO COIT… BA",	"CONC”RDIA SC",	"CONTENDAS DO SINCOR¡ BA",	"CORONEL JOS… DIAS PI",	"CORUP¡ SC",	"CRATE⁄S CE",	"CROMÕNIA GO",	"CUIT… DE MAMANGUAPE PB",	"CUNHATAÕ SC",	"CURA«¡ BA",	"DIVIN…SIA MG",	"DOIS IRM√OS DAS MISS’ES RS",	"DOM INOC NCIO PI",	"DURAND… MG",	"ENTRE-IJUÕS RS",	"…RICO CARDOSO BA",	"ESPÕRITO SANTO RN",	"F¡TIMA BA",	"FELÕCIO DOS SANTOS MG",	"FERNAND”POLIS SP",	"FERN√O SP",	"FLOR DO SERT√O SC",	"FLORES DO PIAUÕ PI",	"FL”RIDA PR",	"FRANCIN”POLIS PI",	"FREI INOC NCIO MG",	"GA⁄CHA DO NORTE MT",	"GL”RIA BA",	"GROAÕRAS CE",	"GUAÕBA RS",	"GUAP” GO",	"GUARANI DE GOI¡S GO",	"GUARANIA«U PR",
-                                                                                        "GUARAR¡ MG",	"GUATAPAR¡ SP",	"GURINH…M PB",	"HELI”POLIS BA",	"HIDROL¬NDIA CE",	"IBICARAÕ BA",	"IBIRAPU√ BA",	"IGARAP… PA",	"IGARAP…-MIRI PA",	"IGRAPI⁄NA BA",	"IMARUÕ SC",	"IMB… DE MINAS MG",	"INACIOL¬NDIA GO",	"INAJ¡ PR",	"INDEPEND NCIA CE",	"INDIAN”POLIS PR",	"IPANGUA«U RN",	"IPIA«U MG",	"IPOR¡ GO",	"IPOR√ PR",	"IPU√ SP",	"ITAGUAJ… PR",	"ITAIP… MG",	"ITAPAG… CE",	"ITAPO¡ SC",	"IT¡POLIS SP",	"ITAPOR√ MS",	"ITAPUÕ SP",	"ITARAR… SP",	"ITA⁄ RN",	"ITUA«U BA",	"ITUBER¡ BA",	"I⁄NA ES",	"IVAÕ PR",	"JA«AN√ RN",	"JAPOAT√ SE",	"JARDIM DO SERID” RN",	"JARDIN”POLIS SP",	"JATOB¡ DO PIAUÕ PI",	"JEQUI¡ DA PRAIA AL",	"JERIC” PB",
-                                                                                        "JOAN”POLIS SP",	"JO√O C¬MARA RN",	"JO√O NEIVA ES",	"JORD√O AC",	"JOS… GON«ALVES DE MINAS MG",	"JUC¡S CE",	"JUNDI¡ AL",	"JUPI¡ SC",	"JURU¡ AM",	"LAGOA DE S√O FRANCISCO PI",	"LAGOA DO PIAUÕ PI",	"LAGOA DOS TR S CANTOS RS",	"LAMAR√O BA",	"LE”POLIS PR",	"LIND”IA SP",	"LUCR…CIA RN",	"LUÕS GOMES RN",	"LUZI¬NIA GO",	"LUZIN”POLIS TO",	"MANAÕRA PB",	"MANICOR… AM",	"MANOEL EMÕDIO PI",	"MARAB¡ PA",	"MARACA«UM… MA",	"MARACAÕ SP",	"MARAC¡S BA",	"MARCEL¬NDIA MT",	"MARECHAL C¬NDIDO RONDON PR",	"MARIAN”POLIS DO TOCANTINS TO",	"MARIC¡ RJ",	"MARING¡ PR",	"MARTIN”POLIS SP",	"MATUP¡ MT",	"MAU¡ DA SERRA PR",	"MAU…S AM",	"MIRASSOL¬NDIA SP",	"MORRO DO CHAP…U BA",	"MOSSOR” RN",
-                                                                                        "MU«UM RS",	"N√O-ME-TOQUE RS",	"NAZAR… BA",	"NIPO√ SP",	"NOVA CANA√ DO NORTE MT",	"NOVA CANA√ PAULISTA SP",	"NOVA ESPERAN«A DO PIRI¡ PA",	"NOVA GL”RIA GO",	"NOVA IBI¡ BA",	"NOVA MARING¡ MT",	"NOVA SANTA B¡RBARA PR",	"NOVA UNI√O RO",	"NOVA VI«OSA BA",	"OEIRAS DO PAR¡ PA",	"OLHO D'¡GUA DAS CUNH√S MA",	"OLHO D'¡GUA DAS FLORES AL",	"OLHO D'¡GUA DO BORGES RN",	"OLHO D'¡GUA DO CASADO AL",	"OLHO D'¡GUA GRANDE AL",	"ORIXIMIN¡ PA",	"OROB” PE",	"OROC” PE",	"OURIL¬NDIA DO NORTE PA",	"OURO VERDE DE GOI¡S GO",	"PACAJ¡ PA",	"PACUJ¡ CE",	"PALESTINA DO PAR¡ PA",	"PALMEIRAS DE GOI¡S GO",	"PALMIN”POLIS GO",	"PALM”POLIS MG",	"PANAM¡ GO",
-                                                                                        "PARAÕBA DO SUL RJ",	"PARAÕSO SP",	"PARAN¡ RN",	"PARANAGU¡ PR",	"PARANAÕBA MS",	"PARA⁄ RN",	"PATOS DO PIAUÕ PI",	"PATROCÕNIO MG",	"PATROCÕNIO PAULISTA SP",	"PAULÕNIA SP",	"PEDRO CAN¡RIO ES",	"PEDRO OS”RIO RS",	"PEND NCIAS RN",	"PERDIG√O MG",	"PI«ARRA PA",	"PICUÕ PB",	"PINHAL√O PR",	"PL¡CIDO DE CASTRO AC",	"PO¡ SP",	"PO«O DE JOS… DE MOURA PB",	"POMP…IA SP",	"PONTAL DO PARAN¡ PR",	"PORCI⁄NCULA RJ",	"PORTO VIT”RIA PR",	"POTIRAGU¡ BA",	"PRAT¬NIA SP",	"PRAT¡POLIS MG",	"PRESIDENTE EPIT¡CIO SP",	"PRESIDENTE M…DICI RO",	"PRIMAVERA DE ROND‘NIA RO",	"QUIPAP¡ PE",	"QUITERIAN”POLIS CE",	"RESERVA DO CABA«AL MT",	"RIACH√O DO DANTAS SE",	"RIBEIR√O BRANCO SP",	"RIBEIR√OZINHO MT",	"RINC√O SP",	"RIO DO ANT‘NIO BA",	"RONDOL¬NDIA MT",	"RORAIN”POLIS RR",	"SAIR… PE",	"SALTO DO JACUÕ RS",	"SANG√O SC",
-                                                                                        "SANHAR” PE",	"SANTA CECÕLIA DO PAV√O PR",	"SANTA CECÕLIA DO SUL RS",	"SANTA LUZIA DO PAR¡ PA",	"SANTA MARIA DO PAR¡ PA",	"SANTA ROSA DO PIAUÕ PI",	"SANTANA DE PARNAÕBA SP",	"SANTANA DO MUNDA⁄ AL",	"SANTANA DO S√O FRANCISCO SE",	"SANTAR…M PA",	"SANTO ANDR… PB",	"SANTO ANT‘NIO DA ALEGRIA SP",	"SANTO ANT‘NIO DA BARRA GO",	"SANTO ANT‘NIO DA PATRULHA RS",	"SANTO ANT‘NIO DO JARDIM SP",	"SANTO ANT‘NIO DO LESTE MT",	"SANTO ANT‘NIO DO MONTE MG",	"SANTO ANT‘NIO DOS MILAGRES PI",	"SANTO IN¡CIO PR",	"S√O BENTO DO TOCANTINS TO",	"S√O BENTO MA",	"S√O CAITANO PE",	"S√O DOMINGOS DO SUL RS",	"S√O DOMINGOS SE",	"S√O FELIPE DO OESTE RO",	"S√O F…LIX DO ARAGUAIA MT",	"S√O F…LIX DO XINGU PA",	"S√O FERNANDO RN",	"S√O FRANCISCO DE ASSIS DO PIAUÕ PI",	"S√O FRANCISCO DE ASSIS RS",	"S√O FRANCISCO DO PAR¡ PA",	"S√O GABRIEL BA",
-                                                                                        "S√O GERALDO DO ARAGUAIA PA",	"S√O GON«ALO DO ABAET… MG",	"S√O JER‘NIMO RS",	"S√O JO√O BATISTA MA",	"S√O JO√O DA LAGOA MG",	"S√O JO√O DA PONTA PA",	"S√O JO√O DA SERRA PI",	"S√O JO√O DA URTIGA RS",	"S√O JO√O D'ALIAN«A GO",	"S√O JO√O DE IRACEMA SP",	"S√O JO√O DO MANTENINHA MG",	"S√O JO√O DO PARAÕSO MA",	"S√O JO√O EVANGELISTA MG",	"S√O JO√O PE",	"S√O JOAQUIM DE BICAS MG",	"S√O JOS… DA COROA GRANDE PE",	"S√O JOS… DE RIBAMAR MA",	"S√O JOS… DO CAMPESTRE RN",	"S√O JOS… DO EGITO PE",	"S√O JOS… DO JACURI MG",	"S√O JOS… DO SUL RS",	"S√O LOUREN«O DO PIAUÕ PI",	"S√O LUÕS DO QUITUNDE AL",	"S√O LUIZ RR",	"S√O MATEUS ES",	"S√O MIGUEL DO GOSTOSO RN",	"S√O MIGUEL DO TOCANTINS TO",	"S√O MIGUEL RN",	"S√O NICOLAU RS",	"S√O RAIMUNDO DO DOCA BEZERRA MA",	"S√O ROQUE DO CANA√ ES",	"S√O SALVADOR DO TOCANTINS TO",	"S√O SEBASTI√O DA BOA VISTA PA",	"S√O SEBASTI√O DA GRAMA SP",	"S√O SEBASTI√O DE LAGOA DE RO«A PB",	"S√O SEBASTI√O DO OESTE MG",	"S√O SEBASTI√O DO PASS… BA",	"S√O SEBASTI√O DO RIO VERDE MG",
-                                                                                        "S√O SEBASTI√O DO UMBUZEIRO PB",	"S√O VICENTE RN",	"SAUDADE DO IGUA«U PR",	"SEBASTI√O BARROS PI",	"SELVÕRIA MS",	"SIRINHA…M PE",	"SÕTIO D'ABADIA GO",	"SÕTIO DO MATO BA",	"SÕTIO NOVO RN",	"TAMANDAR… PE",	"TANGAR¡ DA SERRA MT",	"TAPAU¡ AM",	"TAQUARA«U DE MINAS MG",	"TAUBAT… SP",	"TEF… AM",	"TEIXEIR”POLIS RO",	"TEJU«UOCA CE",	"TE”FILO OTONI MG",	"TERESINA DE GOI¡S GO",	"TIMBA⁄BA PE",	"TRAIR√O PA",	"TR S ARROIOS RS",	"TR S LAGOAS MS",	"TREZE TÕLIAS SC",	"TURIL¬NDIA MA",	"UBAÕRA BA",	"UIBAÕ BA",	"UIRAMUT√ RR",	"ULIAN”POLIS PA",	"URAÕ PR",	"URUC¬NIA MG",	"URUTAÕ GO",	"VALEN«A BA",	"V¡RZEA DA PALMA MG",	"VESPASIANO CORR A RS",	"VIAM√O RS",	"VI«OSA RN",	"VIT”RIA DO JARI AP",	"XAMBIO¡ TO",	"XEX…U PE",
-                                                                                        "PINDORAMA DO TOCANTINS TO","MATIAS OLÕMPIO PI","JACOBINA DO PIAUÕ PI","ITAIPAVA DO GRAJA⁄ MA","GON«ALVES MG","ESTRELA DO INDAI¡ MG","BEL…M DE MARIA PE","ARA«OIABA PE","ANT‘NIO DIAS MG" ),
+                                                                                        "ANT√îNIO GON√áALVES BA",	"ANT√îNIO JO√ÉO MS",	"APARECIDA DE GOI√ÇNIA GO",	"ARA√áU GO",	"ARAGUAN√É MA",	"ARARANGU√Å SC",	"ARAUC√ÅRIA PR",	"ARA√öJOS MG",	"AREN√ìPOLIS GO",	"ARUJ√Å SP",	"ASS√ö RN",	"AUGUSTO CORR√äA PA",	"AURORA DO PAR√Å PA",	"BA√çA FORMOSA RN",	"BANZA√ä BA",	"BAR√ÉO DE MONTE ALTO MG",	"BARRA D'ALC√ÇNTARA PI",	"BARRA DO PIRA√ç RJ",	"BELA VISTA DO MARANH√ÉO MA",	"BELA VISTA DO PIAU√ç PI",	"BEL√âM DO PIAU√ç PI",	"BENTO GON√áALVES RS",	"BEQUIM√ÉO MA",	"BET√ÇNIA DO PIAU√ç PI",	"BOA ESPERAN√áA DO IGUA√áU PR",	"BOCAI√öVA DO SUL PR",	"BRASIL√âIA AC",	"BREJOL√ÇNDIA BA",	"BURITI DE GOI√ÅS GO",	"CA√áADOR SC",
+                                                                                        "CACHOEIRA DO PIRI√Å PA",	"CAI√áARA DO RIO DO VENTO RN",	"CAI√áARA RS",	"CALDAS BRAND√ÉO PB",	"CALDEIR√ÉO GRANDE DO PIAU√ç PI",	"CALIF√ìRNIA PR",	"CAMET√Å PA",	"CAMPINAS DO PIAU√ç PI",	"CAMPO LARGO DO PIAU√ç PI",	"CANAN√âIA SP",	"CAN√ÅPOLIS BA",	"CANDEL√ÅRIA RS",	"CAPIT√ÉO ANDRADE MG",	"CAPIT√ÉO EN√âAS MG",	"CARANA√çBA MG",	"CAREIRO DA V√ÅRZEA AM",	"CARIDADE DO PIAU√ç PI",	"CARI√öS CE",	"CARM√ìPOLIS DE MINAS MG",	"CATOL√ÇNDIA BA",	"CATURIT√â PB",	"CENTEN√ÅRIO RS",	"CERQUEIRA C√âSAR SP",	"CES√ÅRIO LANGE SP",	"CHAPADA GA√öCHA MG",	"CHAPEC√ì SC",	"CIP√ì BA",	"CL√ÅUDIO MG",	"COCALZINHO DE GOI√ÅS GO",	"COL√çDER MT",	"COL√îNIA LEOPOLDINA AL",	"CONCEI√á√ÉO DA BARRA ES",
+                                                                                        "CONCEI√á√ÉO DO CASTELO ES",	"CONCEI√á√ÉO DO COIT√â BA",	"CONC√ìRDIA SC",	"CONTENDAS DO SINCOR√Å BA",	"CORONEL JOS√â DIAS PI",	"CORUP√Å SC",	"CRATE√öS CE",	"CROM√çNIA GO",	"CUIT√â DE MAMANGUAPE PB",	"CUNHATA√ç SC",	"CURA√á√Å BA",	"DIVIN√âSIA MG",	"DOIS IRM√ÉOS DAS MISS√ïES RS",	"DOM INOC√äNCIO PI",	"DURAND√â MG",	"ENTRE-IJU√çS RS",	"√âRICO CARDOSO BA",	"ESP√çRITO SANTO RN",	"F√ÅTIMA BA",	"FEL√çCIO DOS SANTOS MG",	"FERNAND√ìPOLIS SP",	"FERN√ÉO SP",	"FLOR DO SERT√ÉO SC",	"FLORES DO PIAU√ç PI",	"FL√ìRIDA PR",	"FRANCIN√ìPOLIS PI",	"FREI INOC√äNCIO MG",	"GA√öCHA DO NORTE MT",	"GL√ìRIA BA",	"GROA√çRAS CE",	"GUA√çBA RS",	"GUAP√ì GO",	"GUARANI DE GOI√ÅS GO",	"GUARANIA√áU PR",
+                                                                                        "GUARAR√Å MG",	"GUATAPAR√Å SP",	"GURINH√âM PB",	"HELI√ìPOLIS BA",	"HIDROL√ÇNDIA CE",	"IBICARA√ç BA",	"IBIRAPU√É BA",	"IGARAP√â PA",	"IGARAP√â-MIRI PA",	"IGRAPI√öNA BA",	"IMARU√ç SC",	"IMB√â DE MINAS MG",	"INACIOL√ÇNDIA GO",	"INAJ√Å PR",	"INDEPEND√äNCIA CE",	"INDIAN√ìPOLIS PR",	"IPANGUA√áU RN",	"IPIA√áU MG",	"IPOR√Å GO",	"IPOR√É PR",	"IPU√É SP",	"ITAGUAJ√â PR",	"ITAIP√â MG",	"ITAPAG√â CE",	"ITAPO√Å SC",	"IT√ÅPOLIS SP",	"ITAPOR√É MS",	"ITAPU√ç SP",	"ITARAR√â SP",	"ITA√ö RN",	"ITUA√áU BA",	"ITUBER√Å BA",	"I√öNA ES",	"IVA√ç PR",	"JA√áAN√É RN",	"JAPOAT√É SE",	"JARDIM DO SERID√ì RN",	"JARDIN√ìPOLIS SP",	"JATOB√Å DO PIAU√ç PI",	"JEQUI√Å DA PRAIA AL",	"JERIC√ì PB",
+                                                                                        "JOAN√ìPOLIS SP",	"JO√ÉO C√ÇMARA RN",	"JO√ÉO NEIVA ES",	"JORD√ÉO AC",	"JOS√â GON√áALVES DE MINAS MG",	"JUC√ÅS CE",	"JUNDI√Å AL",	"JUPI√Å SC",	"JURU√Å AM",	"LAGOA DE S√ÉO FRANCISCO PI",	"LAGOA DO PIAU√ç PI",	"LAGOA DOS TR√äS CANTOS RS",	"LAMAR√ÉO BA",	"LE√ìPOLIS PR",	"LIND√ìIA SP",	"LUCR√âCIA RN",	"LU√çS GOMES RN",	"LUZI√ÇNIA GO",	"LUZIN√ìPOLIS TO",	"MANA√çRA PB",	"MANICOR√â AM",	"MANOEL EM√çDIO PI",	"MARAB√Å PA",	"MARACA√áUM√â MA",	"MARACA√ç SP",	"MARAC√ÅS BA",	"MARCEL√ÇNDIA MT",	"MARECHAL C√ÇNDIDO RONDON PR",	"MARIAN√ìPOLIS DO TOCANTINS TO",	"MARIC√Å RJ",	"MARING√Å PR",	"MARTIN√ìPOLIS SP",	"MATUP√Å MT",	"MAU√Å DA SERRA PR",	"MAU√âS AM",	"MIRASSOL√ÇNDIA SP",	"MORRO DO CHAP√âU BA",	"MOSSOR√ì RN",
+                                                                                        "MU√áUM RS",	"N√ÉO-ME-TOQUE RS",	"NAZAR√â BA",	"NIPO√É SP",	"NOVA CANA√É DO NORTE MT",	"NOVA CANA√É PAULISTA SP",	"NOVA ESPERAN√áA DO PIRI√Å PA",	"NOVA GL√ìRIA GO",	"NOVA IBI√Å BA",	"NOVA MARING√Å MT",	"NOVA SANTA B√ÅRBARA PR",	"NOVA UNI√ÉO RO",	"NOVA VI√áOSA BA",	"OEIRAS DO PAR√Å PA",	"OLHO D'√ÅGUA DAS CUNH√ÉS MA",	"OLHO D'√ÅGUA DAS FLORES AL",	"OLHO D'√ÅGUA DO BORGES RN",	"OLHO D'√ÅGUA DO CASADO AL",	"OLHO D'√ÅGUA GRANDE AL",	"ORIXIMIN√Å PA",	"OROB√ì PE",	"OROC√ì PE",	"OURIL√ÇNDIA DO NORTE PA",	"OURO VERDE DE GOI√ÅS GO",	"PACAJ√Å PA",	"PACUJ√Å CE",	"PALESTINA DO PAR√Å PA",	"PALMEIRAS DE GOI√ÅS GO",	"PALMIN√ìPOLIS GO",	"PALM√ìPOLIS MG",	"PANAM√Å GO",
+                                                                                        "PARA√çBA DO SUL RJ",	"PARA√çSO SP",	"PARAN√Å RN",	"PARANAGU√Å PR",	"PARANA√çBA MS",	"PARA√ö RN",	"PATOS DO PIAU√ç PI",	"PATROC√çNIO MG",	"PATROC√çNIO PAULISTA SP",	"PAUL√çNIA SP",	"PEDRO CAN√ÅRIO ES",	"PEDRO OS√ìRIO RS",	"PEND√äNCIAS RN",	"PERDIG√ÉO MG",	"PI√áARRA PA",	"PICU√ç PB",	"PINHAL√ÉO PR",	"PL√ÅCIDO DE CASTRO AC",	"PO√Å SP",	"PO√áO DE JOS√â DE MOURA PB",	"POMP√âIA SP",	"PONTAL DO PARAN√Å PR",	"PORCI√öNCULA RJ",	"PORTO VIT√ìRIA PR",	"POTIRAGU√Å BA",	"PRAT√ÇNIA SP",	"PRAT√ÅPOLIS MG",	"PRESIDENTE EPIT√ÅCIO SP",	"PRESIDENTE M√âDICI RO",	"PRIMAVERA DE ROND√îNIA RO",	"QUIPAP√Å PE",	"QUITERIAN√ìPOLIS CE",	"RESERVA DO CABA√áAL MT",	"RIACH√ÉO DO DANTAS SE",	"RIBEIR√ÉO BRANCO SP",	"RIBEIR√ÉOZINHO MT",	"RINC√ÉO SP",	"RIO DO ANT√îNIO BA",	"RONDOL√ÇNDIA MT",	"RORAIN√ìPOLIS RR",	"SAIR√â PE",	"SALTO DO JACU√ç RS",	"SANG√ÉO SC",
+                                                                                        "SANHAR√ì PE",	"SANTA CEC√çLIA DO PAV√ÉO PR",	"SANTA CEC√çLIA DO SUL RS",	"SANTA LUZIA DO PAR√Å PA",	"SANTA MARIA DO PAR√Å PA",	"SANTA ROSA DO PIAU√ç PI",	"SANTANA DE PARNA√çBA SP",	"SANTANA DO MUNDA√ö AL",	"SANTANA DO S√ÉO FRANCISCO SE",	"SANTAR√âM PA",	"SANTO ANDR√â PB",	"SANTO ANT√îNIO DA ALEGRIA SP",	"SANTO ANT√îNIO DA BARRA GO",	"SANTO ANT√îNIO DA PATRULHA RS",	"SANTO ANT√îNIO DO JARDIM SP",	"SANTO ANT√îNIO DO LESTE MT",	"SANTO ANT√îNIO DO MONTE MG",	"SANTO ANT√îNIO DOS MILAGRES PI",	"SANTO IN√ÅCIO PR",	"S√ÉO BENTO DO TOCANTINS TO",	"S√ÉO BENTO MA",	"S√ÉO CAITANO PE",	"S√ÉO DOMINGOS DO SUL RS",	"S√ÉO DOMINGOS SE",	"S√ÉO FELIPE DO OESTE RO",	"S√ÉO F√âLIX DO ARAGUAIA MT",	"S√ÉO F√âLIX DO XINGU PA",	"S√ÉO FERNANDO RN",	"S√ÉO FRANCISCO DE ASSIS DO PIAU√ç PI",	"S√ÉO FRANCISCO DE ASSIS RS",	"S√ÉO FRANCISCO DO PAR√Å PA",	"S√ÉO GABRIEL BA",
+                                                                                        "S√ÉO GERALDO DO ARAGUAIA PA",	"S√ÉO GON√áALO DO ABAET√â MG",	"S√ÉO JER√îNIMO RS",	"S√ÉO JO√ÉO BATISTA MA",	"S√ÉO JO√ÉO DA LAGOA MG",	"S√ÉO JO√ÉO DA PONTA PA",	"S√ÉO JO√ÉO DA SERRA PI",	"S√ÉO JO√ÉO DA URTIGA RS",	"S√ÉO JO√ÉO D'ALIAN√áA GO",	"S√ÉO JO√ÉO DE IRACEMA SP",	"S√ÉO JO√ÉO DO MANTENINHA MG",	"S√ÉO JO√ÉO DO PARA√çSO MA",	"S√ÉO JO√ÉO EVANGELISTA MG",	"S√ÉO JO√ÉO PE",	"S√ÉO JOAQUIM DE BICAS MG",	"S√ÉO JOS√â DA COROA GRANDE PE",	"S√ÉO JOS√â DE RIBAMAR MA",	"S√ÉO JOS√â DO CAMPESTRE RN",	"S√ÉO JOS√â DO EGITO PE",	"S√ÉO JOS√â DO JACURI MG",	"S√ÉO JOS√â DO SUL RS",	"S√ÉO LOUREN√áO DO PIAU√ç PI",	"S√ÉO LU√çS DO QUITUNDE AL",	"S√ÉO LUIZ RR",	"S√ÉO MATEUS ES",	"S√ÉO MIGUEL DO GOSTOSO RN",	"S√ÉO MIGUEL DO TOCANTINS TO",	"S√ÉO MIGUEL RN",	"S√ÉO NICOLAU RS",	"S√ÉO RAIMUNDO DO DOCA BEZERRA MA",	"S√ÉO ROQUE DO CANA√É ES",	"S√ÉO SALVADOR DO TOCANTINS TO",	"S√ÉO SEBASTI√ÉO DA BOA VISTA PA",	"S√ÉO SEBASTI√ÉO DA GRAMA SP",	"S√ÉO SEBASTI√ÉO DE LAGOA DE RO√áA PB",	"S√ÉO SEBASTI√ÉO DO OESTE MG",	"S√ÉO SEBASTI√ÉO DO PASS√â BA",	"S√ÉO SEBASTI√ÉO DO RIO VERDE MG",
+                                                                                        "S√ÉO SEBASTI√ÉO DO UMBUZEIRO PB",	"S√ÉO VICENTE RN",	"SAUDADE DO IGUA√áU PR",	"SEBASTI√ÉO BARROS PI",	"SELV√çRIA MS",	"SIRINHA√âM PE",	"S√çTIO D'ABADIA GO",	"S√çTIO DO MATO BA",	"S√çTIO NOVO RN",	"TAMANDAR√â PE",	"TANGAR√Å DA SERRA MT",	"TAPAU√Å AM",	"TAQUARA√áU DE MINAS MG",	"TAUBAT√â SP",	"TEF√â AM",	"TEIXEIR√ìPOLIS RO",	"TEJU√áUOCA CE",	"TE√ìFILO OTONI MG",	"TERESINA DE GOI√ÅS GO",	"TIMBA√öBA PE",	"TRAIR√ÉO PA",	"TR√äS ARROIOS RS",	"TR√äS LAGOAS MS",	"TREZE T√çLIAS SC",	"TURIL√ÇNDIA MA",	"UBA√çRA BA",	"UIBA√ç BA",	"UIRAMUT√É RR",	"ULIAN√ìPOLIS PA",	"URA√ç PR",	"URUC√ÇNIA MG",	"URUTA√ç GO",	"VALEN√áA BA",	"V√ÅRZEA DA PALMA MG",	"VESPASIANO CORR√äA RS",	"VIAM√ÉO RS",	"VI√áOSA RN",	"VIT√ìRIA DO JARI AP",	"XAMBIO√Å TO",	"XEX√âU PE",
+                                                                                        "PINDORAMA DO TOCANTINS TO","MATIAS OL√çMPIO PI","JACOBINA DO PIAU√ç PI","ITAIPAVA DO GRAJA√ö MA","GON√áALVES MG","ESTRELA DO INDAI√Å MG","BEL√âM DE MARIA PE","ARA√áOIABA PE","ANT√îNIO DIAS MG" ),
                                                                           vectorize=FALSE)
 # filter municipalities to only the audited ones
 votes_per_candidate_2000<-
   votes_per_candidate_2000 %>% filter(unique_municipality_id %in% 
                                         (drew_and_coded_municipalities$unique_municipality_id)) %>% # consider results 1st turn# 935 unique municipalities
-                               filter(!(RESULT=="2∫ TURNO"))%>%
+                               filter(!(RESULT=="2¬∫ TURNO"))%>%
                                group_by(unique_municipality_id) %>% 
                                       mutate(
                                       share_vote = Total / sum(Total), # calculate vote shares
@@ -399,24 +399,24 @@ elected_mayors_2004<-votes_per_candidate_2004[votes_per_candidate_2004$RESULT=="
 elected_mayors_2008<-votes_per_candidate_2008[votes_per_candidate_2008$RESULT=="ELEITO",]  %>%
   mutate(mayors_2008=ifelse(RESULT=="ELEITO",1,0)) # 955 elected, 20 mayors elected in supplementary elections
 elected_mayors_2008$NAME_CANDIDATE <- stri_replace_all_regex(elected_mayors_2008$NAME_CANDIDATE, # accents are an issue to match, align these candidates with votes_per_candidates_2012 so the elected mayors are also seen in the latter database
-                                                                          pattern=c("M¡RIO TOM¡S LITAIFF","JOSE VANDEVELDER FREITAS FRANCELINO",
-                                                                                    "JOS… RAMOS FURTADO","JOS… AUGUSTO DE MELO","JOS… ALBERTO AZEVEDO",
-                                                                                    "L¡ZARO ROBERTO DA SILVA","SEBASTIAO MENDES PINTO NETO",
-                                                                                    "LUIZ ANTONIO PULCH…RIO LOPES CONDE BASTOS REGO MATOS DE SOUSA",
-                                                                                    "NO… XAVIER RODRIGUES PALHETA","FRANCISCO ALIPIO NEVES",
-                                                                                    "JOS… LOPES FILHO","CLEA MARCIA  BERNARDES DE OLIVEIRA",
-                                                                                    "ANDERSON B¡RCIA ZANON","JOS… LUIZ VIEIRA","ARI JOS… BONALDO PEGORARO",
-                                                                                    "C…SAR ROBERTO COUTO DE BRITO","GILMAR JOS… SACCOMORI",
-                                                                                    "JO√O MARIO CRISTOFARI","JOS… PAULO MENEGHINE","ROG…RIO PERIN",
-                                                                                    "JOS… ANT‘NIO JACOMINI","C…LIO REJANI"),
-                                                                          replacement=c("MARIO TOMAS LITAIFF","JOS… VANDEVELDER FREITAS FRANCELINO",
+                                                                          pattern=c("M√ÅRIO TOM√ÅS LITAIFF","JOSE VANDEVELDER FREITAS FRANCELINO",
+                                                                                    "JOS√â RAMOS FURTADO","JOS√â AUGUSTO DE MELO","JOS√â ALBERTO AZEVEDO",
+                                                                                    "L√ÅZARO ROBERTO DA SILVA","SEBASTIAO MENDES PINTO NETO",
+                                                                                    "LUIZ ANTONIO PULCH√âRIO LOPES CONDE BASTOS REGO MATOS DE SOUSA",
+                                                                                    "NO√â XAVIER RODRIGUES PALHETA","FRANCISCO ALIPIO NEVES",
+                                                                                    "JOS√â LOPES FILHO","CLEA MARCIA  BERNARDES DE OLIVEIRA",
+                                                                                    "ANDERSON B√ÅRCIA ZANON","JOS√â LUIZ VIEIRA","ARI JOS√â BONALDO PEGORARO",
+                                                                                    "C√âSAR ROBERTO COUTO DE BRITO","GILMAR JOS√â SACCOMORI",
+                                                                                    "JO√ÉO MARIO CRISTOFARI","JOS√â PAULO MENEGHINE","ROG√âRIO PERIN",
+                                                                                    "JOS√â ANT√îNIO JACOMINI","C√âLIO REJANI"),
+                                                                          replacement=c("MARIO TOMAS LITAIFF","JOS√â VANDEVELDER FREITAS FRANCELINO",
                                                                                         "JOSE RAMOS FURTADO","JOSE AUGUSTO DE MELO","JOSE ALBERTO AZEVEDO",
-                                                                                        "LAZARO ROBERTO DA SILVA","SEBASTI√O MENDES PINTO NETO",
-                                                                                        "LUIZ ANT‘NIO PULCHERIO LOPES CONDE BASTOS REGO MATOS DE SOUSA",
-                                                                                        "NOE XAVIER RODRIGUES PALHETA","FRANCISCO ALÕPIO NEVES",
-                                                                                        "JOSE LOPES FILHO","CL…A M¡RCIA BERNARDES DE OLIVEIRA",
+                                                                                        "LAZARO ROBERTO DA SILVA","SEBASTI√ÉO MENDES PINTO NETO",
+                                                                                        "LUIZ ANT√îNIO PULCHERIO LOPES CONDE BASTOS REGO MATOS DE SOUSA",
+                                                                                        "NOE XAVIER RODRIGUES PALHETA","FRANCISCO AL√çPIO NEVES",
+                                                                                        "JOSE LOPES FILHO","CL√âA M√ÅRCIA BERNARDES DE OLIVEIRA",
                                                                                         "ANDERSON BARCIA ZANON","JOSE LUIZ VIEIRA","ARI JOSE BONALDO PEGORARO",
-                                                                                        "CESAR ROBERTO COUTO DE BRITO","GILMAR JOSE SACCOMORI","JOAO M¡RIO CRISTOFARI",
+                                                                                        "CESAR ROBERTO COUTO DE BRITO","GILMAR JOSE SACCOMORI","JOAO M√ÅRIO CRISTOFARI",
                                                                                         "JOSE PAULO MENEGHINE","ROGERIO PERIN","JOSE ANTONIO JACOMINI","CELIO REJANI"),
                                                                           vectorize=FALSE)
 
@@ -453,7 +453,7 @@ elected_mayors_2004_reduced$cand_no_accents <- stri_replace_all_regex(elected_ma
                                                                   pattern = c("EDVALDO ALVES QUEIROZ","JOSE LUIZ ANCHITE","JOAO BATISTA DIAS                                                     ",
                                                                               "GENEBALDO JOSE DE BARROS","ALCEU MAZZIONI","DIRNEI DE FATIMA GANDOLFI","PAULO MARQUES DA FONSECA",
                                                                               "BERNARDINHO  CROZETTA","JOAO JOSE GONCALVES SOUSA LIMA",
-                                                                              "GUMERCINDO  OLIVEIRA DA SILVA","PAULINO PEREIRA DOS SANTOS","TEREZA DE F¡TIMA BARBOSA CEDRIM",
+                                                                              "GUMERCINDO  OLIVEIRA DA SILVA","PAULINO PEREIRA DOS SANTOS","TEREZA DE F√ÅTIMA BARBOSA CEDRIM",
                                                                               "FRANCIVAL CASSEANO DO REGO","EDIMIR JOSE DA SILVA","ARTUR ALCIDES DE SOUZA",
                                                                               "JOSE LUIS ALVES ANTUNES","EVERALDO  DIAS DE ARRUDA","VOLMIR MATT","CARLOS CARAIBAS DE SOUZA",
                                                                               "MANUEL VALENTE DE LIMA NETO                                           ",
@@ -489,8 +489,8 @@ candidates_2008<-merge(x=votes_per_candidate_2008,y=incumbents_2008, # incumbent
                    CODE_SIT_CAND_TOT,NM_TIPO_ELEICAO.y,CD_ELEICAO,DS_CARGO,CD_SITUACAO_CANDIDATURA,CD_SITUACAO_CANDIDATO_PLEITO,
                    CD_SITUACAO_CANDIDATO_URNA,DS_SITUACAO_CANDIDATO_URNA,CD_TIPO_ELEICAO,
                    cand_no_accents,mun_no_accents,NAME_CANDIDATE.y)) %>%
-  filter(!(RESULT=="SUBSTITUÕDO")) %>%
-  filter(is.na(ST_CANDIDATO_INSERIDO_URNA)|(ST_CANDIDATO_INSERIDO_URNA!="N√O")) %>% 
+  filter(!(RESULT=="SUBSTITU√çDO")) %>%
+  filter(is.na(ST_CANDIDATO_INSERIDO_URNA)|(ST_CANDIDATO_INSERIDO_URNA!="N√ÉO")) %>% 
   # dplyr::rename(margin_victory=margin_victory.x,)
   # group_by(unique_municipality_id,DESCRIPT_ELECTION) %>% 
   # mutate(
@@ -499,37 +499,37 @@ candidates_2008<-merge(x=votes_per_candidate_2008,y=incumbents_2008, # incumbent
   # ungroup() %>%
   mutate(ST_REELEICAO= # the value of this variable was informed by the candidates, however by matching with elected_04 dataframe, some of them were actually not elected in 2004 so they could not be candidates trying re-elections in 2008 as they were not elected in first place in 2004
            replace(ST_REELEICAO, unique_candidate_id  %in% 
-                     c("ANA MARIA MATOSO BIM FERNAND”POLIS SP","ANTONIO GOMES FERREIRA FONTE BOA AM","AZOKA JOS… MACIEL GOUVEIA ALIAN«A PE",
-                       "BARTOLOMEU FERREIRA LIMA TIMBA⁄BA PE", "CARLOS EDUARDO BASTOS LEITE POJUCA BA","CL¡UDIO AFONSO ALFLEN VICTOR GRAEFF RS",
-                       "CLAUDIO MARCIO SANTOS QUEIROZ VALEN«A BA","DAI«ON MACIEL DA SILVA SANTO ANT‘NIO DA PATRULHA RS",
+                     c("ANA MARIA MATOSO BIM FERNAND√ìPOLIS SP","ANTONIO GOMES FERREIRA FONTE BOA AM","AZOKA JOS√â MACIEL GOUVEIA ALIAN√áA PE",
+                       "BARTOLOMEU FERREIRA LIMA TIMBA√öBA PE", "CARLOS EDUARDO BASTOS LEITE POJUCA BA","CL√ÅUDIO AFONSO ALFLEN VICTOR GRAEFF RS",
+                       "CLAUDIO MARCIO SANTOS QUEIROZ VALEN√áA BA","DAI√áON MACIEL DA SILVA SANTO ANT√îNIO DA PATRULHA RS",
                        "DALTON DE SOUZA LIMA CORGUINHO MS", "DALTON DE SOUZA LIMA CORGUINHO MS","EDSON BUENO COUTINHO MONTIVIDIU GO",
                        "EDVALDO NOGUEIRA FILHO ARACAJU SE","EZEQUIAS VIANA BRAGA GUARATINGA BA","FABIO CESAR JATOBA ROTEIRO AL",
                        "FABIO GARCIA TIGRE NANUQUE MG","FRANCISCO DE SALES DO NASCIMENTO CAMPO FORMOSO BA",
-                       "FRANCISCO LUIS DOS SANTOS FAZENDA RIO GRANDE PR","GILBERTO JOSE DA SILVA LEAL PARAÕBA DO SUL RJ",
+                       "FRANCISCO LUIS DOS SANTOS FAZENDA RIO GRANDE PR","GILBERTO JOSE DA SILVA LEAL PARA√çBA DO SUL RJ",
                        "GIOVANNI LOPES GAGLIANO AURELINO LEAL BA","HAROLDO RIBEIRO TEIXEIRA MARTINS RN", "HELENO JARDIM MOUTINHO CORONEL MURTA MG",
-                       "ILTON LARRI COSTA SALTO DO JACUÕ RS","INOCENCIO LEAL PARENTE DOM INOC NCIO PI",
+                       "ILTON LARRI COSTA SALTO DO JACU√ç RS","INOCENCIO LEAL PARENTE DOM INOC√äNCIO PI",
                        "ITAMAR DA SILVA RIOS CAPIM GROSSO BA","JANIO ARRUDA DA SILVA TAQUARITINGA DO NORTE PE",
-                       "JO√O ALFREDO HERBST MAFRA SC","JO√O ALVES ALENCAR SENADOR LA ROCQUE MA","JONAS DOS SANTOS SOUZA ULIAN”POLIS PA",
-                       "JORGE ERNANI DA SILVA CRUZ S√O FRANCISCO DE ASSIS RS","JOS… ALMIR MATOS LOPES GROAÕRAS CE",
-                       "JOSE ANACLETO VITORIANO S√O JOAQUIM DE BICAS MG","JOS… DE OLIVEIRA FILHO JACOBINA DO PIAUÕ PI",
-                       "JOS… FRANCISCO RIBEIRO MENDES ENGENHEIRO COELHO SP","JOS… HAILTON DE CAMARGO RIBEIR√O BRANCO SP",
-                       "JOSE ROMULO CARNEIRO DE ALBUQUERQUE PITIMBU PB","KLEBER CALISTO DE SOUZA CEREJEIRAS RO","LE√O SANTOS NETO ARARI MA",
+                       "JO√ÉO ALFREDO HERBST MAFRA SC","JO√ÉO ALVES ALENCAR SENADOR LA ROCQUE MA","JONAS DOS SANTOS SOUZA ULIAN√ìPOLIS PA",
+                       "JORGE ERNANI DA SILVA CRUZ S√ÉO FRANCISCO DE ASSIS RS","JOS√â ALMIR MATOS LOPES GROA√çRAS CE",
+                       "JOSE ANACLETO VITORIANO S√ÉO JOAQUIM DE BICAS MG","JOS√â DE OLIVEIRA FILHO JACOBINA DO PIAU√ç PI",
+                       "JOS√â FRANCISCO RIBEIRO MENDES ENGENHEIRO COELHO SP","JOS√â HAILTON DE CAMARGO RIBEIR√ÉO BRANCO SP",
+                       "JOSE ROMULO CARNEIRO DE ALBUQUERQUE PITIMBU PB","KLEBER CALISTO DE SOUZA CEREJEIRAS RO","LE√ÉO SANTOS NETO ARARI MA",
                        "LUIZ FLAVIO DE PAIVA NIQUINI ITABIRITO MG", "LUIZ GONZAGA COQUEIRO SOBRINHO PRESIDENTE VARGAS MA",
                        "MANOEL MESSIAS SUKITA SANTOS CAPELA SE", "MARCUS VINICIUS VIEIRA DE ALMEIDA SENTINELA DO SUL RS",
                        "MARIA CRIZABETE DOS SANTOS GRACCHO CARDOSO SE","MARIA DE FATIMA ARAUJO DIOGENES SABOEIRO CE",
-                       "MAURO ANDRE BUSINARO PORTO ESTRELA MT","ODIVALDO MIGUEL DE OLIVEIRA PAIVA MAU…S AM",
+                       "MAURO ANDRE BUSINARO PORTO ESTRELA MT","ODIVALDO MIGUEL DE OLIVEIRA PAIVA MAU√âS AM",
                        "ODIVAR FACO BEBERIBE CE","ORLANDO PADOVAN PIRAPOZINHO SP","OSNI FRANCISCO DE FRAGAS ITUPORANGA SC",
-                       "PAULO RODRIGUES WANDERLEY AMAJARI RR","PAULO SERGIO DE MORAES IARAS SP","PEDRO MIRANDA RODRIGUES S√O BENTO DO TOCANTINS TO",
+                       "PAULO RODRIGUES WANDERLEY AMAJARI RR","PAULO SERGIO DE MORAES IARAS SP","PEDRO MIRANDA RODRIGUES S√ÉO BENTO DO TOCANTINS TO",
                        "REMACLO SOUZA CANTO CAPIM BRANCO MG","SELMIR ANTONIO GAUZA SANTA TEREZA DO OESTE PR","SONIA DE MELO AUGUSTO CIDADE OCIDENTAL GO",
-                       "TANIA MARIA PORTUGAL DA SILVA S√O SEBASTI√O DO PASS… BA","TEN”RIO ROSA ARAUJO ANT‘NIO DIAS MG","TEOPHILO BARBOZA MASSI CORGUINHO MS",
-                       "VALDECI JOS… DA SILVA BEL…M DE MARIA PE","VILMAR FERREIRA DE ARAUJO S√O JO√O D'ALIAN«A GO",
-                       "WAGNER ALVES PARANAIBA IPIA«U MG","YALMO QUERINO DA SILVA LOURDES SP"),"N")) %>%
+                       "TANIA MARIA PORTUGAL DA SILVA S√ÉO SEBASTI√ÉO DO PASS√â BA","TEN√ìRIO ROSA ARAUJO ANT√îNIO DIAS MG","TEOPHILO BARBOZA MASSI CORGUINHO MS",
+                       "VALDECI JOS√â DA SILVA BEL√âM DE MARIA PE","VILMAR FERREIRA DE ARAUJO S√ÉO JO√ÉO D'ALIAN√áA GO",
+                       "WAGNER ALVES PARANAIBA IPIA√áU MG","YALMO QUERINO DA SILVA LOURDES SP"),"N")) %>%
   dplyr::rename(NM_TIPO_ELEICAO=NM_TIPO_ELEICAO.x, margin_victory=margin_victory.x,NAME_CANDIDATE=NAME_CANDIDATE.x,share_vote=share_vote.x)%>%
   mutate(ST_REELEICAO= # the value of this variable was informed by the candidates, some indicate "N" relection but they actually were elected in 2004 so were running for reelections
            replace(ST_REELEICAO, unique_candidate_id  %in%
-                     c("ANTONIO JORGE DE ARAG√O NUNES POJUCA BA","CARLOS AUGUSTO CARDOSO COSTA DIVINA PASTORA SE",
-                       "C…LIO ANT‘NIO LAGUNA SC","EDILSON GRANGEIRO XAVIER IARAS SP","LUZARDO PACHECO AIBAR SENTINELA DO SUL RS",
-                       "MARIA JOS… DE OLIVEIRA GURGEL COSTA MARTINS RN"),"S")) 
+                     c("ANTONIO JORGE DE ARAG√ÉO NUNES POJUCA BA","CARLOS AUGUSTO CARDOSO COSTA DIVINA PASTORA SE",
+                       "C√âLIO ANT√îNIO LAGUNA SC","EDILSON GRANGEIRO XAVIER IARAS SP","LUZARDO PACHECO AIBAR SENTINELA DO SUL RS",
+                       "MARIA JOS√â DE OLIVEIRA GURGEL COSTA MARTINS RN"),"S")) 
 # 2012 :                       
 candidates_2012<-merge(x=votes_per_candidate_2012,y=incumbents_2012,
                        by.x = c("NAME_CANDIDATE","unique_municipality_id","NM_TIPO_ELEICAO"),
@@ -540,23 +540,23 @@ candidates_2012<-merge(x=votes_per_candidate_2012,y=incumbents_2012,
                    CD_SITUACAO_CANDIDATO_PLEITO,CD_SITUACAO_CANDIDATO_URNA,DS_SITUACAO_CANDIDATO_URNA)) %>%
   mutate(ST_REELEICAO= # the value of this variable was informed by the candidates, however by matching with elected_08 dataframe, some of them were actually not elected in 2004 so they could not be candidates trying re-elections in 2012 as they were not elected in first place in 2008
            replace(ST_REELEICAO, unique_candidate_id  %in% 
-                     c("FRANCISCO ARY RIBEIRO TEIXEIRA ARACOIABA CE","GILDENE PEREIRA DOS SANTOS PEDRO CAN¡RIO ES",
+                     c("FRANCISCO ARY RIBEIRO TEIXEIRA ARACOIABA CE","GILDENE PEREIRA DOS SANTOS PEDRO CAN√ÅRIO ES",
                        "JOAO BATISTA GOMES RODRIGUES EDEALINA GO","NAUDIOMAR ELIAS DE SOUZA PIRACANJUBA GO",
                        "EVERALDO VIDAL PEREIRA MARTINS NOVO GAMA GO","GUMERCINDO AUGUSTO DE RESENDE SANTANA DE CATAGUASES MG",
-                       "GENTIL PEREIRA MENDON«A S√O JO√O DO MANTENINHA MG","ADEUVALDO PEREIRA DE SOUZA PALESTINA DO PAR¡ PA",
-                       "JOS… LINS DA SILVA FILHO NATUBA PB","EDVALDO MARCOS RAMOS FERREIRA JUREMA PE",
-                       "JOAMY ALVES DE OLIVEIRA ARA«OIABA PE","JETRO DO NASCIMENTO GOMES SANTA MARIA DA BOA VISTA PE",
-                       "GENIVALDO SANTOS IRINEU S√O FRANCISCO DE ASSIS DO PIAUÕ PI","FABRICIO DOS SANTOS BAIAO SAPUCAIA RJ",
+                       "GENTIL PEREIRA MENDON√áA S√ÉO JO√ÉO DO MANTENINHA MG","ADEUVALDO PEREIRA DE SOUZA PALESTINA DO PAR√Å PA",
+                       "JOS√â LINS DA SILVA FILHO NATUBA PB","EDVALDO MARCOS RAMOS FERREIRA JUREMA PE",
+                       "JOAMY ALVES DE OLIVEIRA ARA√áOIABA PE","JETRO DO NASCIMENTO GOMES SANTA MARIA DA BOA VISTA PE",
+                       "GENIVALDO SANTOS IRINEU S√ÉO FRANCISCO DE ASSIS DO PIAU√ç PI","FABRICIO DOS SANTOS BAIAO SAPUCAIA RJ",
                        "JOEL LEANDRO WILHELM IGREJINHA RS","LUCIANO DE ALMEIDA SEMENSATO CACONDE SP",
-                       "CELSO SOARES NOGUEIRA JOAN”POLIS SP","JOAO CARNEIRO DA SILVA JURU¡ AM",
+                       "CELSO SOARES NOGUEIRA JOAN√ìPOLIS SP","JOAO CARNEIRO DA SILVA JURU√Å AM",
                        "EMILIANA ASSUNCAO SANTOS CAMAMU BA","FRANCISCO VASCONCELOS CAMAMU BA",
                        "DEROAKSON MATTOS ROSA CAMAMU BA","LUIZ OLIVEIRA DA LUZ CAMAMU BA",
-                       "NO…LIA MARIA NASCIMENTO DA SILVA CAMAMU BA","GILMAR EVANGELISTA SANTOS CAMAMU BA",
+                       "NO√âLIA MARIA NASCIMENTO DA SILVA CAMAMU BA","GILMAR EVANGELISTA SANTOS CAMAMU BA",
                        "CLAUDINEIA ABRANTES DA CUNHA AFONSO CUNHA MA","LEONEL LEMOS DE SOUZA BRITO BONITO MS",
                        "VILMA CARVALHO AMORIM ESPERANTINA PI","SILVANA BEN SALBEGO MANOEL VIANA RS",
                        "PAULO ROBERTO KOPSCHINA NOVO HAMBURGO RS","EDI DIONE DIAS DE MORAES NOVO HAMBURGO RS",
-                       "IDEVETE PAULO DE OLIVEIRA ARVOREDO SC","JOS… GARCIA DA COSTA JOAN”POLIS SP"),"N"))%>% # some candidates did not inform if were trying re-election or not, verified in elected_08 and set as "N"
-  filter(na.omit(YEAR_ELECTION)& DS_SITUACAO_CANDIDATO_PLEITO !="Ren˙ncia") %>%
+                       "IDEVETE PAULO DE OLIVEIRA ARVOREDO SC","JOS√â GARCIA DA COSTA JOAN√ìPOLIS SP"),"N"))%>% # some candidates did not inform if were trying re-election or not, verified in elected_08 and set as "N"
+  filter(na.omit(YEAR_ELECTION)& DS_SITUACAO_CANDIDATO_PLEITO !="Ren√∫ncia") %>%
   merge(y=elected_mayors_2008,
         by = c("NAME_CANDIDATE","unique_municipality_id"), # add TYPE_ELECT in merge
         all=T) %>% 
@@ -611,13 +611,13 @@ balance_test<- merge(drew_mun_reelect_candidad, controls, by = ("unique_municipa
          candidate_name_ballotbox_yn = ST_CANDIDATO_INSERIDO_URNA, draw_number = sorteio,state_aggregate_north_region = State,
          n_audit_service_orders=no_os, corruption=lfalha_total, alliance_polparties = DS_COMPOSICAO_COLIGACAO, 
          name_candidate_ballot=NM_URNA_CANDIDATO,candidate_status_per_turn = DS_SITUACAO_CANDIDATO_PLEITO,election_date=DT_ELEICAO) %>%
-  dplyr::select(-c(DESC_SIT_CAND_SUPERIOR, NM_COLIGACAO,"MunicÌpio (CÛdigo)","Unidade de Medida", Ano)) 
+  dplyr::select(-c(DESC_SIT_CAND_SUPERIOR, NM_COLIGACAO,"Munic√≠pio (C√≥digo)","Unidade de Medida", Ano)) 
 balance_test[,-c(1:64,70:73)]<-sapply(balance_test[,-c(1:64,70:73)], function(x) as.numeric(gsub(",",".",x))) # replace comma separators by dot
 
 # Restrict sample: exclude candidates with share votes =100% or 0%, meaning candidatures were rejected after the polls due to irregularities
 balance_test_share_restricted<-subset(balance_test, share_vote != 1 & share_vote != 0)%>% # remove observations with vote share = 100% these are cases where one of the candidates had its candidature/election denied due to irregularities
-  mutate(delta_share = replace(delta_share, NAME_CANDIDATE=="TEREZA DE F¡TIMA BARBOSA CEDRIM", -0.0634621)) %>%
-  mutate(delta_margin = replace(delta_margin, NAME_CANDIDATE=="TEREZA DE F¡TIMA BARBOSA CEDRIM", -0.1269241)) %>%
+  mutate(delta_share = replace(delta_share, NAME_CANDIDATE=="TEREZA DE F√ÅTIMA BARBOSA CEDRIM", -0.0634621)) %>%
+  mutate(delta_margin = replace(delta_margin, NAME_CANDIDATE=="TEREZA DE F√ÅTIMA BARBOSA CEDRIM", -0.1269241)) %>%
   mutate(delta_share = replace(delta_share, NAME_CANDIDATE=="VOLMIR MATT", 0.0093503)) %>%
   mutate(delta_margin = replace(delta_margin, NAME_CANDIDATE=="VOLMIR MATT", -0.2548564)) %>%
   mutate(delta_share = replace(delta_share, delta_margin == -Inf, NA))%>%
@@ -637,7 +637,7 @@ votes_per_candidate_name_per_section_geo_08<-read_excel("votes_per_candidate_nam
   mutate(unique_municipality_id=paste(NAME_MUNICIPALITY, ACRONYM_STATE))%>%
   filter(unique_municipality_id %in% (balance_test_08$unique_municipality_id))%>%
   filter(NUM_ROUND.x != 2) %>%
-  filter(RESULT != "2∫ TURNO") %>%
+  filter(RESULT != "2¬∫ TURNO") %>%
   group_by(unique_municipality_id,NUM_ELECT_SECTION) %>% 
   mutate(
     share_vote = Total.x / sum(Total.x), # calculate vote shares
@@ -675,7 +675,7 @@ votes_per_candidate_name_per_section_geo_12<-read_excel("votes_per_candidate_nam
   mutate(unique_municipality_id=paste(NAME_MUNICIPALITY, ACRONYM_STATE))%>%
   filter(unique_municipality_id %in% (balance_test_12$unique_municipality_id))%>%
   filter(NUM_ROUND.x != 2) %>%
-  filter(RESULT != "2∫ TURNO") %>%
+  filter(RESULT != "2¬∫ TURNO") %>%
   group_by(unique_municipality_id,NUM_ELECT_SECTION) %>% 
   mutate(
     share_vote = Total.x / sum(Total.x), # calculate vote shares
